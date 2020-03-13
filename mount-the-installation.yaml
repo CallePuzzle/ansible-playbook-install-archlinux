@@ -1,0 +1,33 @@
+---
+- name: Mount the installation
+  hosts: all
+  tasks:
+
+    # using ansible 2.10
+    # https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/crypto/luks_device.py
+    - name: Create and open the LUKS container
+      luks_device:
+        device: "{{ luks_device.device }}"
+        state: "opened"
+        name: "{{ luks_device.name }}"
+        passphrase: "{{ luks_device_passphrase }}"
+        type: "{{ luks_device.type }}"
+
+    - name: Mount lvm partitions
+      mount:
+        src: "/dev/mapper/Vol-{{ item.name }}"
+        path: "/mnt{{ item.path }}"
+        fstype: "{{ item.type }}"
+        state: mounted
+      loop: "{{ lvm_partitions }}"
+      when: item.path is defined
+
+    - name: Mount boot partition
+      mount:
+        src: "/dev/sda1"
+        path: "/mnt/boot"
+        fstype: "vfat"
+        state: mounted
+
+    - name: Swap on
+      command: "swapon /dev/mapper/Vol-swap"
