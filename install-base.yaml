@@ -1,0 +1,86 @@
+---
+- name: Install ArchLinux base
+  hosts: all
+  tasks:
+
+    - name: Create partition 1
+      parted:
+        device: /dev/sda
+        number: 1
+        state: present
+        part_start: "0%"
+        part_end: "{{ boot_partition_size }}"
+
+    - name: Format boot partition
+      filesystem:
+        fstype: "vfat"
+        dev: "/dev/sda1"
+
+    - name: Create partition 2
+      parted:
+        device: /dev/sda
+        number: 2
+        state: present
+        part_start: "{{ boot_partition_size }}"
+        part_end: "100%"
+
+    # using ansible 2.10
+    # https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/crypto/luks_device.py
+    - name: Create and open the LUKS container
+      luks_device:
+        device: "{{ luks_device.device }}"
+        state: "opened"
+        name: "{{ luks_device.name }}"
+        passphrase: "{{ luks_device_passphrase }}"
+        type: "{{ luks_device.type }}"
+
+    - name: Create VolGroup
+      lvg:
+        vg: Vol
+        pvs: /dev/mapper/cryptolvm
+
+    - name: Create local storage
+      lvol:
+        vg: Vol
+        lv: "{{ item.name }}"
+        size: "{{ item.size }}"
+        shrink: false
+        resizefs: true
+      loop: "{{ lvm_partitions }}"
+
+    - name: Format lvm partitions
+      filesystem:
+        fstype: "{{ item.type }}"
+        dev: "/dev/mapper/Vol-{{ item.name }}"
+      loop: "{{ lvm_partitions }}"
+
+    - name: Mount lvm partitions
+      mount:
+        src: "/dev/mapper/Vol-{{ item.name }}"
+        path: "/mnt{{ item.path }}"
+        fstype: "{{ item.type }}"
+        state: mounted
+      loop: "{{ lvm_partitions }}"
+      when: item.path is defined
+
+    - name: Create boot directory
+      file:
+        path: /mnt/boot/
+        state: directory
+        mode: '0755'
+
+    - name: Mount boot partition
+      mount:
+        src: "/dev/sda1"
+        path: "/mnt/boot"
+        fstype: "vfat"
+        state: mounted
+
+    - name: Swap on
+      command: "swapon /dev/mapper/Vol-swap"
+
+    - name: Install the base packages
+      command: "pacstrap /mnt base base-devel linux linux-firmware"
+
+    - name: Generate fstab
+      command: "genfstab -U /mnt >> /mnt/etc/fstab"
