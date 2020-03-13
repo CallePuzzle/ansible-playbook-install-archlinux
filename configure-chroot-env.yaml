@@ -1,0 +1,83 @@
+---
+- name: Configure chroot environment
+  hosts: all
+  tasks:
+
+    - name: Link localtime
+      file:
+        src: /mnt/usr/share/zoneinfo/Europe/Madrid
+        dest: /mnt/etc/localtime
+        state: link
+
+    - name: Configure localtime
+      command: chroot /mnt bash -c 'hwclock --systohc'
+
+    - name: Configure locale gen
+      lineinfile:
+        path: /mnt/etc/locale.gen
+        line: "es_ES ISO-8859-1"
+        regexp: "^es_ES "
+        insertafter: "^#es_ES ISO-8859-1"
+
+    - name: Execute locale-gen
+      command: chroot /mnt bash -c 'locale-gen'
+
+    - name: Configure locale conf
+      lineinfile:
+        path: /mnt/etc/locale.conf
+        create: true
+        line: "LANG=es_ES.utf8"
+        regexp: "^LANG=es_ES.utf8"
+
+    - name: Configure vconsole
+      lineinfile:
+        path: /mnt/etc/vconsole.conf
+        create: true
+        line: "KEYMAP=es"
+        regexp: "^KEYMAP=es"
+
+    - name: Configure hostname
+      lineinfile:
+        path: /mnt/etc/hostname
+        create: true
+        line: slimbook
+        regexp: "^slimbook"
+
+    - name: Install lvm2 xfsprogs
+      command: chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs'
+
+    - name: Configure mkinitcpio
+      lineinfile:
+        path: /mnt/etc/mkinitcpio.conf
+        line: 'HOOKS=(base udev autodetect modconf block encrypt lvm2 resume filesystems keyboard fsck)'
+        regexp: '^HOOKS=\('
+
+    - name: Execute mkinitcpio
+      command: chroot /mnt bash -c 'mkinitcpio -p linux'
+
+    - name: Install microcode
+      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed intel-ucode'
+
+    - name: Install grub
+      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed grub efibootmgr'
+
+    - name: Grub install
+      command: chroot /mnt bash -c 'grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB'
+
+    - name: Configure GRUB_CMDLINE_LINUX
+      lineinfile:
+        path: /mnt/etc/default/grub
+        line: 'GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda2:lvm root=/dev/mapper/Vol-root elevator=noop"'
+        regexp: '^GRUB_CMDLINE_LINUX='
+
+    - name: Configure GRUB_CMDLINE_LINUX_DEFAULT
+      lineinfile:
+        path: /mnt/etc/default/grub
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet resume=/dev/mapper/Vol-swap"'
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+
+    - name: Grub mkconfig
+      command: chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
+
+    - name: Install dhclient
+      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed dhclient openssh bash-completion'
