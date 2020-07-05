@@ -1,0 +1,129 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Create user
+      user:
+        name: cesar
+        uid: 1000
+        group: users
+        groups: power,storage,wheel
+        append: yes
+
+    - name: Install pacman-contrib
+      pacman:
+        name: pacman-contrib
+
+    - name: Create mirrorlist backup
+      copy:
+        src: /etc/pacman.d/mirrorlist
+        dest: /etc/pacman.d/mirrorlist.backup
+        remote_src: yes
+      when: false # TODO idempotence
+
+    - name: Rank mirrorlist
+      command: rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+      when: false # TODO idempotence
+
+    - name: Install X
+      pacman:
+        name:
+          - xf86-video-intel
+          - xorg
+          - plasma
+
+    - name: Enable X
+      service:
+        name: "{{ item }}"
+        enabled: yes
+      loop:
+        - sddm
+        - NetworkManager
+
+    - name: Install necessary packages
+      pacman:
+        name:
+          - dolphin
+          - leafpad
+          - spectacle
+          - okular
+          - gwenview
+          - terminator
+          - vlc
+          - unzip
+          - ark
+          - bluedevil
+          - bluez
+          - bluez-libs
+          - bluez-utils
+          - pulseaudio-bluetooth
+          - the_silver_searcher
+          - nextcloud-client
+          - htop
+          - cups
+          - libcups
+          - print-manager
+          - bind-tools
+          - wget
+          - git
+          - rsync
+          - nfs-utils
+          - usbutils
+
+    - name: Create config terminator directory
+      file:
+        path: /home/cesar/.config/terminator
+        state: directory
+
+    - name: Configure terminator
+      copy:
+        src: files/terminator.config
+        dest: /home/cesar/.config/terminator/config
+        owner: cesar
+
+    - name: Download firefox
+      get_url:
+        url: "https://download.mozilla.org/?product=firefox-nightly-latest-l10n-ssl&os=linux64&lang=es-ES"
+        dest: /opt/firefox.tar.bz2
+        owner: cesar
+
+    - name: Install firefox
+      unarchive:
+        src: /opt/firefox.tar.bz2
+        dest: /opt/
+        remote_src: yes
+        owner: cesar
+        group: users
+
+    - name: Create firefox bin link
+      file:
+        src: /opt/firefox/firefox
+        dest: /usr/bin/firefox
+        state: link
+
+    - name: Mount nas
+      mount:
+        path: "{{ item.path }}"
+        src: "{{ item.src }}"
+        fstype: nfs
+        opts: user,noauto,users
+        state: present
+      loop:
+        - src: nas.casa.cece:/volume2/cesar
+          path: /srv/NAS/cesar
+        - src: nas.casa.cece:/volume4/datas
+          path: /srv/NAS/datas
+
+    - name: Create nas path
+      file:
+        path: "/srv/{{ item }}"
+        state: directory
+        owner: cesar
+        group: users
+      loop:
+        - NAS
+        - NAS/cesar
+        - NAS/datas
+      tags:
+        - current
