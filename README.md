@@ -4,8 +4,9 @@
 $ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file installation-base.yaml
 ```
 
+## TODO
 
-
+```
     2  mkdir aur
     3  cd aur/
     4  git
@@ -20,3 +21,4 @@ $ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file i
    13  pikaur -S spotify --noconfirm
    14  gpg --recv-keys 4773BD5E130D1D45
    15  pikaur -S spotify --noconfirm
+```

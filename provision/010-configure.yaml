@@ -1,0 +1,26 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Create config terminator directory
+      file:
+        path: /home/cesar/.config/terminator
+        state: directory
+
+    - name: Configure terminator
+      copy:
+        src: ../files/terminator.config
+        dest: /home/cesar/.config/terminator/config
+        owner: cesar
+
+    - name: Configure kde plasma
+      copy:
+        src: "../files/{{ item }}.config"
+        dest: "/home/cesar/.config/{{ item }}"
+        owner: cesar
+      loop:
+        - kglobalshortcutsrc
+        - kwinrc
+        - powermanagementprofilesrc
+        - xkbrc

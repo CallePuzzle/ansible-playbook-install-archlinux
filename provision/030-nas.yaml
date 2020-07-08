@@ -1,0 +1,30 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Mount nas
+      mount:
+        path: "{{ item.path }}"
+        src: "{{ item.src }}"
+        fstype: nfs
+        opts: user,noauto,users
+        state: present
+      loop:
+        - src: nas.casa.cece:/volume2/cesar
+          path: /srv/NAS/cesar
+        - src: nas.casa.cece:/volume4/datas
+          path: /srv/NAS/datas
+
+    - name: Create nas path
+      file:
+        path: "/srv/{{ item }}"
+        state: directory
+        owner: cesar
+        group: users
+      loop:
+        - NAS
+        - NAS/cesar
+        - NAS/datas
+      tags:
+        - current

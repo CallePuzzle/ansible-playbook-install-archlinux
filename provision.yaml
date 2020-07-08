@@ -1,0 +1,5 @@
+---
+- import_playbook: provision/000-base.yaml
+- import_playbook: provision/010-configure.yaml
+- import_playbook: provision/020-firefox.yaml
+- import_playbook: provision/030-nas.yaml
