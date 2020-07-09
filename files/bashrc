@@ -1,0 +1,36 @@
+#
+# ~/.bashrc
+#
+
+if [ -n "$DESKTOP_SESSION" ];then
+    export SSH_ASKPASS=/usr/bin/ksshaskpass
+    eval $(ssh-agent)
+    ssh-add < /dev/null
+fi
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+alias ls='ls --color=auto'
+PS1='[\u@\h \W]\$ '
+
+export EDITOR=vim
+export PATH="$HOME/.local/bin:$HOME/.symfony/bin:$HOME/.emacs.d/bin:$PATH"
+
+# Play safe!
+alias 'rm=rm -i'
+alias 'mv=mv -i'
+alias 'cp=cp -i'
+
+#Alias mios
+alias 'emacs=emacs -nw'
+alias 'fix-codestyle=./bin/php-cqtools code:fix-codestyle --only-commited-files'
+
+function e () { emacsclient -n $1;}
+
+function f () { find . -name $1; }
+
+function fe () { find . -name $1 | xargs -i emacsclient -n {} ;}
+
+# AWS
+complete -C '${HOME}/.local/bin/aws_completer' aws

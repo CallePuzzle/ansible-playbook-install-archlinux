@@ -24,3 +24,35 @@
         - kwinrc
         - powermanagementprofilesrc
         - xkbrc
+
+    - name: Create config git directory
+      file:
+        path: /home/cesar/.git
+        state: directory
+
+    - name: Configure git
+      copy:
+        src: ../files/git.config
+        dest: /home/cesar/.gitconfig
+        owner: cesar
+
+    - name: Create config ssh directory
+      file:
+        path: /home/cesar/.ssh
+        state: directory
+
+    - name: Configure ssh
+      copy:
+        src: "../files/{{ item }}"
+        dest: "/home/cesar/.ssh/{{ item }}"
+        owner: cesar
+        mode: 0600
+      loop:
+        - id_rsa
+        - id_rsa.pub
+
+    - name: Configure bashrc
+      copy:
+        src: ../files/bashrc
+        dest: /home/cesar/.bashrc
+        owner: cesar
