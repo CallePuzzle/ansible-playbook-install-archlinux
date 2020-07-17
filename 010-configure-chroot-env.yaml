@@ -15,9 +15,9 @@
     - name: Configure locale gen
       lineinfile:
         path: /mnt/etc/locale.gen
-        line: "es_ES ISO-8859-1"
+        line: "es_ES.UTF-8 UTF-8"
         regexp: "^es_ES "
-        insertafter: "^#es_ES ISO-8859-1"
+        insertafter: "^#es_ES.UTF-8 UTF-8"
 
     - name: Execute locale-gen
       command: chroot /mnt bash -c 'locale-gen'
