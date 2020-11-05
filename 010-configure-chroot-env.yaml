@@ -40,8 +40,8 @@
       lineinfile:
         path: /mnt/etc/hostname
         create: true
-        line: slimbook
-        regexp: "^slimbook"
+        line: "{{ inventory_hostname }}"
+        regexp: "^{{ inventory_hostname }}"
 
     - name: Install lvm2 xfsprogs
       command: chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs'

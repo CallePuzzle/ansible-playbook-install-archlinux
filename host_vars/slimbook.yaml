@@ -21,3 +21,5 @@ lvm_partitions:
     size: "100%FREE"
     type: ext4
     path: /
+
+disk_name: "/dev/sda"

@@ -5,7 +5,7 @@
 
     - name: Create partition 1
       parted:
-        device: /dev/sda
+        device: {{ disk_name }}
         number: 1
         state: present
         part_start: "0%"
@@ -14,11 +14,11 @@
     - name: Format boot partition
       filesystem:
         fstype: "vfat"
-        dev: "/dev/sda1"
+        dev: "{{ disk_name }}1"
 
     - name: Create partition 2
       parted:
-        device: /dev/sda
+        device: "{{ disk_name }}"
         number: 2
         state: present
         part_start: "{{ boot_partition_size }}"
@@ -71,7 +71,7 @@
 
     - name: Mount boot partition
       mount:
-        src: "/dev/sda1"
+        src: "{{ disk_name }}1"
         path: "/mnt/boot"
         fstype: "vfat"
         state: mounted

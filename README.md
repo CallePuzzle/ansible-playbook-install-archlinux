@@ -22,3 +22,6 @@ $ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file i
    14  gpg --recv-keys 4773BD5E130D1D45
    15  pikaur -S spotify --noconfirm
 ```
+
+
+https://github.com/kewlfft/ansible-aur

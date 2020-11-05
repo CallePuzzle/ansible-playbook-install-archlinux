@@ -7,6 +7,7 @@
       file:
         path: /home/cesar/.config/terminator
         state: directory
+        owner: cesar
 
     - name: Configure terminator
       copy:
@@ -24,6 +25,7 @@
         - kwinrc
         - powermanagementprofilesrc
         - xkbrc
+        - ksmserverrc
 
     - name: Create config git directory
       file:
@@ -40,6 +42,7 @@
       file:
         path: /home/cesar/.ssh
         state: directory
+        owner: cesar
 
     - name: Configure ssh
       copy:
