@@ -23,3 +23,5 @@ lvm_partitions:
     path: /
 
 disk_name: "/dev/sda"
+
+user_name: cesar

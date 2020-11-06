@@ -80,4 +80,4 @@
       command: chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
 
     - name: Install dhclient
-      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed dhclient openssh bash-completion python'
+      command: chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim'

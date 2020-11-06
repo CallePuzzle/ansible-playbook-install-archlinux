@@ -7,18 +7,18 @@
       get_url:
         url: "https://download.mozilla.org/?product=firefox-nightly-latest-l10n-ssl&os=linux64&lang=es-ES"
         dest: /opt/firefox.tar.bz2
-        owner: cesar
+        owner: "{{ user_name }}"
 
     - name: Install firefox
       unarchive:
         src: /opt/firefox.tar.bz2
         dest: /opt/
         remote_src: yes
-        owner: cesar
+        owner: "{{ user_name }}"
         group: users
 
     - name: Create firefox bin link
       file:
         src: /opt/firefox/firefox
-        dest: /usr/bin/firefox
+        dest: /usr/bin/firefox-dev
         state: link

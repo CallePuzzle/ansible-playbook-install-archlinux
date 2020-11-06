@@ -5,7 +5,7 @@
 
     - name: Create partition 1
       parted:
-        device: {{ disk_name }}
+        device: "{{ disk_name }}"
         number: 1
         state: present
         part_start: "0%"

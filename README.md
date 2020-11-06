@@ -1,8 +1,40 @@
 # ansible-playbook-install-archlinux
 
-```bash
-$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file installation-base.yaml
+## Install USB
+
+``` bash
+dd if=image.iso of=/dev/sdb bs=4M
 ```
+
+## Base installation
+
+``` bash
+root@archiso# systemctl start sshd
+root@archiso# passwd
+```
+
+```bash
+$ ansible-playbook -i monom.ini --vault-password-file .vault-password-file 000-platform-base.yaml -k
+$ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k 010-configure-chroot-env.yaml
+```
+
+```bash
+root@archiso# arch-chroot /mnt
+root@archiso# passwd
+root@archiso# exit
+root@archiso# reboot
+```
+
+## Configuration / provision
+
+* Allow ssh root login `# vim /etc/ssh/sshd_config`
+* Start sshd
+
+```bash
+$ $ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k provision/000-base.yaml
+$ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k 010-configure-chroot-env.yaml
+```
+
 
 ## TODO
 

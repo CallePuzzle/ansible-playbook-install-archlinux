@@ -5,7 +5,7 @@
 
     - name: Create user
       user:
-        name: cesar
+        name: "{{ user_name }}"
         uid: 1000
         group: users
         groups: power,storage,wheel
@@ -23,7 +23,7 @@
       when: false # TODO idempotence
 
     - name: Rank mirrorlist
-      command: rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+      command: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
       when: false # TODO idempotence
 
     - name: Install X
