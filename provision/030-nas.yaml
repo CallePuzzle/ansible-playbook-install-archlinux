@@ -20,7 +20,7 @@
       file:
         path: "/srv/{{ item }}"
         state: directory
-        owner: cesar
+        owner: "{{ user_name }}"
         group: users
       loop:
         - NAS
