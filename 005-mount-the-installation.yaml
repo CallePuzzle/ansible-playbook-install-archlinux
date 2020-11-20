@@ -24,7 +24,7 @@
 
     - name: Mount boot partition
       mount:
-        src: "{{ disk_name }}1"
+        src: "{{ boot_partition }}"
         path: "/mnt/boot"
         fstype: "vfat"
         state: mounted

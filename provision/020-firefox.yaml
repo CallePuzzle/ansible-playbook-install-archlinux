@@ -14,6 +14,11 @@
         src: /opt/firefox.tar.bz2
         dest: /opt/
         remote_src: yes
+
+    - name: Set owner
+      file:
+        path: /opt/firefox/
+        recurse: true
         owner: "{{ user_name }}"
         group: users
 

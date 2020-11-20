@@ -14,7 +14,7 @@
     - name: Format boot partition
       filesystem:
         fstype: "vfat"
-        dev: "{{ disk_name }}1"
+        dev: "{{ boot_partition }}"
 
     - name: Create partition 2
       parted:
@@ -71,7 +71,7 @@
 
     - name: Mount boot partition
       mount:
-        src: "{{ disk_name }}1"
+        src: "{{ boot_partition }}"
         path: "/mnt/boot"
         fstype: "vfat"
         state: mounted

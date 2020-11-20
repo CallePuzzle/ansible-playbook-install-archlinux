@@ -67,7 +67,7 @@
     - name: Configure GRUB_CMDLINE_LINUX
       lineinfile:
         path: /mnt/etc/default/grub
-        line: 'GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda2:lvm root=/dev/mapper/Vol-root elevator=noop"'
+        line: 'GRUB_CMDLINE_LINUX="cryptdevice={{ luks_device.device }}:lvm root=/dev/mapper/Vol-root elevator=noop"'
         regexp: '^GRUB_CMDLINE_LINUX='
 
     - name: Configure GRUB_CMDLINE_LINUX_DEFAULT

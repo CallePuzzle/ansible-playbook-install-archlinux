@@ -24,7 +24,6 @@
         - kglobalshortcutsrc
         - kwinrc
         - powermanagementprofilesrc
-        - xkbrc
 
     - name: ksmserverrc
       community.general.ini_file:
@@ -32,6 +31,22 @@
         section: General
         option: loginMode
         value: emptySession
+        backup: yes
+
+    - name: kxkbrc LayoutList
+      community.general.ini_file:
+        path: "/home/{{ user_name }}/.config/kxkbrc"
+        section: Layout
+        option: LayoutList
+        value: es,us
+        backup: yes
+
+    - name: kxkbrc Options
+      community.general.ini_file:
+        path: "/home/{{ user_name }}/.config/kxkbrc"
+        section: Layout
+        option: Options
+        value: caps:ctrl_modifier
         backup: yes
 
     - name: Configure git
