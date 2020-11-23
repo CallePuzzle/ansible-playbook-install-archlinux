@@ -70,3 +70,5 @@
           - rsync
           - nfs-utils
           - usbutils
+          - python-virtualenv
+          - emacs

@@ -1,0 +1,22 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Create aur dir
+      file:
+        path: "/home/{{ user_name }}/aur"
+        state: directory
+        owner: "{{ user_name }}"
+        group: users
+
+    - name: Download PKGBUILD
+      get_url:
+        url: "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=pikaur"
+        dest: "/home/{{ user_name }}/aur/PKGBUILD"
+        owner: "{{ user_name }}"
+
+    - name: Makepkg
+      command: makepkg -si
+      args:
+        chdir: "/home/{{ user_name }}/aur"
