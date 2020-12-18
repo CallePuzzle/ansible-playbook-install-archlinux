@@ -11,6 +11,7 @@
 
     - name: Configure localtime
       command: chroot /mnt bash -c 'hwclock --systohc'
+      when: false
 
     - name: Configure locale gen
       lineinfile:

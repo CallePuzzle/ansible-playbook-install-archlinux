@@ -31,7 +31,7 @@ root@archiso# reboot
 * Start sshd
 
 ```bash
-$ $ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k provision/000-base.yaml
+$ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k provision/000-base.yaml
 $ ansible-playbook -i monom.ini --vault-password-file .vault-password-file -k 010-configure-chroot-env.yaml
 ```
 

@@ -8,6 +8,7 @@
         url: "https://download.mozilla.org/?product=firefox-nightly-latest-l10n-ssl&os=linux64&lang=es-ES"
         dest: /opt/firefox.tar.bz2
         owner: "{{ user_name }}"
+      when: false
 
     - name: Install firefox
       unarchive:
