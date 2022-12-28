@@ -30,7 +30,7 @@
       pacman:
         name:
           - xf86-video-intel
-          - xorg
+          - xorg-xwayland
           - plasma
 
     - name: Enable X

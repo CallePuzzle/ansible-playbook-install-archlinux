@@ -10,7 +10,7 @@
         state: link
 
     - name: Configure localtime
-      command: chroot /mnt bash -c 'hwclock --systohc'
+      command: arch-chroot /mnt bash -c 'hwclock --systohc'
       when: false
 
     - name: Configure locale gen
@@ -21,7 +21,7 @@
         insertafter: "^#es_ES.UTF-8 UTF-8"
 
     - name: Execute locale-gen
-      command: chroot /mnt bash -c 'locale-gen'
+      command: arch-chroot /mnt bash -c 'locale-gen'
 
     - name: Configure locale conf
       lineinfile:
@@ -45,7 +45,7 @@
         regexp: "^{{ inventory_hostname }}"
 
     - name: Install lvm2 xfsprogs
-      command: chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs'
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs'
 
     - name: Configure mkinitcpio
       lineinfile:
@@ -54,16 +54,16 @@
         regexp: '^HOOKS=\('
 
     - name: Execute mkinitcpio
-      command: chroot /mnt bash -c 'mkinitcpio -p linux'
+      command: arch-chroot /mnt bash -c 'mkinitcpio -p linux'
 
     - name: Install microcode
-      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed intel-ucode'
+      command: arch-chroot /mnt bash -c 'pacman -S  --noconfirm --needed intel-ucode'
 
     - name: Install grub
-      command: chroot /mnt bash -c 'pacman -S  --noconfirm --needed grub efibootmgr'
+      command: arch-chroot /mnt bash -c 'pacman -S  --noconfirm --needed grub efibootmgr'
 
     - name: Grub install
-      command: chroot /mnt bash -c 'grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB'
+      command: arch-chroot /mnt bash -c 'grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB'
 
     - name: Configure GRUB_CMDLINE_LINUX
       lineinfile:
@@ -78,7 +78,7 @@
         regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
 
     - name: Grub mkconfig
-      command: chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
+      command: arch-chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
 
     - name: Install dhclient
-      command: chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim'
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim'
