@@ -126,15 +126,15 @@
 
     - name: Create config ssh directory
       file:
-        path: "/home/{{ user_name }}/.ssh"
+        path: "/home/{{ ansible_ssh_user }}/.ssh"
         state: directory
-        owner: "{{ user_name }}"
+        owner: "{{ ansible_ssh_user }}"
 
     - name: Configure ssh
       copy:
         src: "../files/{{ item }}"
-        dest: "/home/{{ user_name }}/.ssh/{{ item }}"
-        owner: "{{ user_name }}"
+        dest: "/home/{{ ansible_ssh_user }}/.ssh/{{ item }}"
+        owner: "{{ ansible_ssh_user }}"
         mode: 0600
       loop:
         - id_rsa
@@ -144,5 +144,5 @@
     - name: Configure bashrc
       copy:
         src: ../files/bashrc
-        dest: "/home/{{ user_name }}/.bashrc"
-        owner: "{{ user_name }}"
+        dest: "/home/{{ ansible_ssh_user }}/.bashrc"
+        owner: "{{ ansible_ssh_user }}"

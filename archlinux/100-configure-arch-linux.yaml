@@ -1,0 +1,3 @@
+- import_playbook: ./010-configure.yaml
+- import_playbook: ./030-nas.yaml
+- import_playbook: ./040-aur.yaml
