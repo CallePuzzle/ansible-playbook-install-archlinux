@@ -1,6 +1,8 @@
 ---
 - name: Installation base
   hosts: all
+  vars:
+    ansible_ssh_user: root
   tasks:
 
     - name: Create user

@@ -1,6 +1,8 @@
 ---
 - name: Mount the installation
   hosts: all
+  vars:
+    ansible_ssh_user: root
   tasks:
 
     # using ansible 2.10

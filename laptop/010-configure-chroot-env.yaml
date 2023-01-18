@@ -1,6 +1,8 @@
 ---
 - name: Configure chroot environment
   hosts: all
+  vars:
+    ansible_ssh_user: root
   tasks:
 
     - name: Link localtime

@@ -1,6 +1,8 @@
 ---
 - name: Platform ArchLinux
   hosts: all
+  vars:
+    ansible_ssh_user: root
   tasks:
 
     - name: Create partition 1
