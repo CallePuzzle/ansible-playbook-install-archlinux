@@ -1,0 +1,26 @@
+---
+- name: Configure Steam Desk Desktop
+  hosts: all
+  tasks:
+
+    - name: Disable readonly steamos
+      command: steamos-readonly disable
+      become: yes
+      become_method: sudo
+
+    - name: Pacman key init
+      command: pacman-key --init
+      become: yes
+      become_method: sudo
+
+    - name: Pacman key populate
+      command: pacman-key --populate
+      become: yes
+      become_method: sudo
+
+    - name: Format microSD
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/mmcblk0p1
+      become: yes
+      become_method: sudo

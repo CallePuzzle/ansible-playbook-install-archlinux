@@ -1,0 +1,148 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Install necessary packages
+      pacman:
+        name:
+          - leafpad
+          - terminator
+          - vlc
+          - the_silver_searcher
+          - nextcloud-client
+          - wget
+          - git
+          - rsync
+          - emacs
+          - btop
+          - firefox
+      become: yes
+      become_method: sudo
+
+    - name: Configure git
+      copy:
+        src: files/git.config
+        dest: "/home/{{ ansible_ssh_user }}/.gitconfig"
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Create config terminator directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/terminator"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure terminator
+      copy:
+        src: files/terminator.config
+        dest: "/home/{{ ansible_ssh_user }}/.config/terminator/config"
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Install doom emacs
+      ansible.builtin.git:
+        repo: https://github.com/doomemacs/doomemacs
+        dest: /home/{{ ansible_ssh_user }}/.emacs.d
+        depth: 1
+
+    - name: Clone doom emacs configuration
+      ansible.builtin.git:
+        repo: https://github.com/jilgue/doom-emacs-config.git
+        dest: /home/{{ ansible_ssh_user }}/.doom.d
+
+    - name: Install doom emacs
+      command: /home/{{ ansible_ssh_user }}/.emacs.d/bin/doom install --force
+      when: false
+      # TODO idempotent
+
+    - name: kxkbrc LayoutList
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kxkbrc"
+        section: Layout
+        option: LayoutList
+        value: es,us
+        no_extra_spaces: true
+        backup: true
+
+    - name: kxkbrc Options
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kxkbrc"
+        section: Layout
+        option: Options
+        value: caps:ctrl_modifier
+        no_extra_spaces: true
+        backup: true
+
+    - name: kwinrc Desktops
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
+        section: Desktops
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: true
+        backup: true
+      loop:
+        - {option: "Id_1", value: "7f91f6e3-2733-4938-8721-957df2d769ae"}
+        - {option: "Id_2", value: "be9529d6-f166-4890-9284-073fc1e17213"}
+        - {option: "Id_3", value: "fdeb20f3-b204-498d-8552-7e3fa4ae4cc8"}
+        - {option: "Name_1", value: "main"}
+        - {option: "Name_2", value: "code"}
+        - {option: "Name_3", value: "chat"}
+        - {option: "Rows_1", value: "1"}
+        - {option: "Number", value: "3"}
+
+    - name: kwinrc Windows
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
+        section: Windows
+        option: RollOverDesktops
+        value: true
+        no_extra_spaces: true
+        backup: true
+
+    - name: kglobalshortcutsrc
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kglobalshortcutsrc"
+        section: kwin
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: true
+        backup: true
+      loop:
+        - {option: "Switch One Desktop to the Left", value: "Ctrl+Alt+Left,Meta+Ctrl+Left,Cambiar al escritorio de la izquierda"}
+        - {option: "Switch One Desktop to the Right", value: "Ctrl+Alt+Right,Meta+Ctrl+Right,Cambiar al escritorio de la derecha"}
+        - {option: "Window One Desktop to the Left", value: "Ctrl+Alt+Shift+Left,none,Ventana al escritorio de la izquierda"}
+        - {option: "Window One Desktop to the Right", value: "Ctrl+Alt+Shift+Right,none,Ventana al escritorio de la derecha"}
+        - {option: "Window No Border", value: "Meta+Backspace,none,Ocultar el borde de la ventana"}
+        - {option: "Window Maximize", value: "Meta+PgUp\tMeta+Up,Meta+PgUp,Maximize Window"}
+        - {option: "Window Minimize", value: "Meta+PgDown\tMeta+Down,Meta+PgDown,Minimize Window"}
+        - {option: "Window Quick Tile Bottom Left", value: "Meta+Ctrl+Left,none,Situar la ventana en mosaico en la parte inferior izquierda"}
+        - {option: "Window Quick Tile Bottom Right", value: "Meta+Ctrl+Right,none,Situar la ventana en mosaico en la parte inferior derecha"}
+        - {option: "Window Quick Tile Left", value: "Meta+Left,Meta+Left,Situar la ventana en mosaico a la izquierda"}
+        - {option: "Window Quick Tile Right", value: "Meta+Right,Meta+Right,Situar la ventana en mosaico a la derecha"}
+        - {option: "Window Quick Tile Top Left", value: "Meta+Alt+Left,none,Situar la ventana en mosaico en la parte superior izquierda"}
+        - {option: "Window Quick Tile Top Right", value: "Meta+Alt+Right,none,Situar la ventana en mosaico en la parte superior derecha"}
+        - {option: "Switch Window Left", value: "none,none,Switch to Window to the Left"}
+        - {option: "Switch Window Right", value: "none,none,Switch to Window to the Right"}
+
+    - name: Create config ssh directory
+      file:
+        path: "/home/{{ user_name }}/.ssh"
+        state: directory
+        owner: "{{ user_name }}"
+
+    - name: Configure ssh
+      copy:
+        src: "../files/{{ item }}"
+        dest: "/home/{{ user_name }}/.ssh/{{ item }}"
+        owner: "{{ user_name }}"
+        mode: 0600
+      loop:
+        - id_rsa
+        - id_rsa.pub
+      when: false
+
+    - name: Configure bashrc
+      copy:
+        src: ../files/bashrc
+        dest: "/home/{{ user_name }}/.bashrc"
+        owner: "{{ user_name }}"

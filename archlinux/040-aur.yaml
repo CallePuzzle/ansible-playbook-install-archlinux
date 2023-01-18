@@ -1,0 +1,40 @@
+---
+- name: Installation base
+  hosts: all
+  tasks:
+
+    - name: Install yay dependencies
+      pacman:
+        name:
+          - git
+          - base-devel
+      become: yes
+      become_method: sudo
+      tags:
+        - installation
+
+    - name: Clone yay repository
+      ansible.builtin.git:
+        repo: https://aur.archlinux.org/yay-bin.git
+        dest: /home/{{ ansible_ssh_user }}/tmp/yay
+      tags:
+        - installation
+
+    - name: Make yay package
+      command: makepkg -si
+      args:
+        chdir: /home/{{ ansible_ssh_user }}/tmp/yay
+      when: false
+      # TODO depends on sudo
+      tags:
+        - installation
+
+    - name: Install vistual studio code
+      ansible.builtin.package:
+        name: visual-studio-code-bin
+        state: present
+        use: yay
+      when: false
+      # TODO https://github.com/kewlfft/ansible-aur
+      tags:
+        - installation

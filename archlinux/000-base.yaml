@@ -45,12 +45,9 @@
       pacman:
         name:
           - dolphin
-          - leafpad
           - spectacle
           - okular
           - gwenview
-          - terminator
-          - vlc
           - unzip
           - ark
           - bluedevil
@@ -58,18 +55,11 @@
           - bluez-libs
           - bluez-utils
           - pulseaudio-bluetooth
-          - the_silver_searcher
-          - nextcloud-client
           - htop
           - cups
           - libcups
           - print-manager
           - bind-tools
-          - wget
-          - git
-          - rsync
           - nfs-utils
           - usbutils
           - python-virtualenv
-          - emacs
-          - btop
