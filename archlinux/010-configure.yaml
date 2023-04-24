@@ -17,12 +17,14 @@
           - emacs
           - btop
           - firefox
+          - audacity
+          - obsidian
       become: yes
       become_method: sudo
 
     - name: Configure git
       copy:
-        src: files/git.config
+        src: ../files/git.config
         dest: "/home/{{ ansible_ssh_user }}/.gitconfig"
         owner: "{{ ansible_ssh_user }}"
 
@@ -34,7 +36,7 @@
 
     - name: Configure terminator
       copy:
-        src: files/terminator.config
+        src: ../files/terminator.config
         dest: "/home/{{ ansible_ssh_user }}/.config/terminator/config"
         owner: "{{ ansible_ssh_user }}"
 
@@ -87,7 +89,7 @@
         - {option: "Name_1", value: "main"}
         - {option: "Name_2", value: "code"}
         - {option: "Name_3", value: "chat"}
-        - {option: "Rows_1", value: "1"}
+        - {option: "Rows", value: "1"}
         - {option: "Number", value: "3"}
 
     - name: kwinrc Windows
@@ -96,6 +98,15 @@
         section: Windows
         option: RollOverDesktops
         value: true
+        no_extra_spaces: true
+        backup: true
+
+    - name: kwinrc Windows
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
+        section: Xwayland
+        option: Scale
+        value: 1
         no_extra_spaces: true
         backup: true
 
@@ -139,7 +150,8 @@
       loop:
         - id_rsa
         - id_rsa.pub
-      when: false
+      tags:
+        - ssh
 
     - name: Configure bashrc
       copy:
