@@ -42,6 +42,7 @@
           - xf86-video-intel
           - xorg-xwayland
           - plasma
+          - plasma-wayland-session
 
     - name: Enable X
       service:

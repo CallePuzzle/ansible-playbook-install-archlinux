@@ -89,7 +89,7 @@
         - {option: "Name_1", value: "main"}
         - {option: "Name_2", value: "code"}
         - {option: "Name_3", value: "chat"}
-        - {option: "Rows_1", value: "1"}
+        - {option: "Rows", value: "1"}
         - {option: "Number", value: "3"}
 
     - name: kwinrc Windows
@@ -98,6 +98,15 @@
         section: Windows
         option: RollOverDesktops
         value: true
+        no_extra_spaces: true
+        backup: true
+
+    - name: kwinrc Windows
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
+        section: Xwayland
+        option: Scale
+        value: 1
         no_extra_spaces: true
         backup: true
 

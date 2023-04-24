@@ -1,3 +1,6 @@
+# Note: This playbook needs a especific ansible colletion: kewlfft.aur
+# ansible-galaxy collection install kewlfft.aur
+# https://github.com/kewlfft/ansible-aur
 ---
 - name: Installation base
   hosts: all
@@ -20,21 +23,42 @@
       tags:
         - installation
 
+    - name: Wheel group no password on sudo
+      community.general.sudoers:
+        name: allow-wheel-group
+        group: wheel
+        state: present
+        nopassword: true
+        commands: ALL
+      become: yes
+      become_method: sudo
+      tags:
+        - always
+
     - name: Make yay package
-      command: makepkg -si
+      command: makepkg -si --needed --noconfirm
       args:
         chdir: /home/{{ ansible_ssh_user }}/tmp/yay
-      when: false
-      # TODO depends on sudo
       tags:
         - installation
 
-    - name: Install vistual studio code
-      ansible.builtin.package:
-        name: visual-studio-code-bin
-        state: present
+    - name: Install packages from AUR
+      kewlfft.aur.aur:
         use: yay
-      when: false
-      # TODO https://github.com/kewlfft/ansible-aur
+        name:
+          - visual-studio-code-bin
+          - sddm-git
       tags:
-        - installation
+        - packages
+
+    - name: Reset wheel group password on sudo
+      community.general.sudoers:
+        name: allow-wheel-group
+        group: wheel
+        state: present
+        nopassword: false
+        commands: ALL
+      become: yes
+      become_method: sudo
+      tags:
+        - always
