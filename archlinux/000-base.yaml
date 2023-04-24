@@ -13,6 +13,14 @@
         groups: power,storage,wheel
         append: yes
 
+    - name: Add user to sudoers
+      community.general.sudoers:
+        name: allow-wheel-group
+        group: wheel
+        state: present
+        nopassword: false
+        commands: ALL
+
     - name: Install pacman-contrib
       pacman:
         name: pacman-contrib

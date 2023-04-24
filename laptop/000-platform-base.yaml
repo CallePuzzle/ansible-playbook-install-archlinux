@@ -39,7 +39,7 @@
     - name: Create VolGroup
       lvg:
         vg: Vol
-        pvs: /dev/mapper/cryptolvm
+        pvs: /dev/mapper/{{ luks_device.name }}
 
     - name: Create local storage
       lvol:
@@ -78,8 +78,14 @@
         fstype: "vfat"
         state: mounted
 
+    - name: Check if swap is on
+      command: "swapon -s"
+      register: swap_on
+      ignore_errors: yes
+
     - name: Swap on
-      command: "swapon /dev/mapper/Vol-swap"
+      command: "swapon -e /dev/mapper/Vol-swap"
+      when: swap_on.stdout_lines|length == 0
 
     - name: Install the base packages
       command: "pacstrap /mnt base base-devel linux linux-firmware"

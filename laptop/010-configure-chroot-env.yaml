@@ -83,4 +83,4 @@
       command: arch-chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
 
     - name: Install dhclient
-      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim'
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim iwd'
