@@ -74,3 +74,9 @@
           - nfs-utils
           - usbutils
           - python-virtualenv
+
+    - name: Start and enable bluetooth
+      service:
+        name: bluetooth
+        enabled: yes
+        state: started

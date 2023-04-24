@@ -19,6 +19,8 @@
           - firefox
           - audacity
           - obsidian
+          - telegram-desktop
+          - kcalc
       become: yes
       become_method: sudo
 
