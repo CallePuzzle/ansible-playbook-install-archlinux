@@ -19,8 +19,10 @@
           - firefox
           - audacity
           - obsidian
+          - noto-fonts-emoji # tasks' icons
           - telegram-desktop
           - kcalc
+          - sshpass
       become: yes
       become_method: sudo
 
