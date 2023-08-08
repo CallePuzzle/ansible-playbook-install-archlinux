@@ -1,0 +1,23 @@
+---
+# https://wiki.archlinux.org/title/MSI_Modern_15_-_A11S
+- name: MSI Configurations
+  hosts: all
+  tasks:
+
+    - name: Secure Boot
+      pacman:
+        name:
+          - intel-media-driver
+          - intel-ucode
+        state: present
+
+    - name: Sound
+      pacman:
+        name:
+          - sof-firmware
+
+
+    - name: Firmware
+      kewlfft.aur.aur:
+        use: yay
+        name: upd72020x-fw

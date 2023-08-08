@@ -1,0 +1,22 @@
+---
+- name: Configure Nuria user
+  hosts: all
+  vars:
+    ansible_ssh_user: root
+  tasks:
+
+    - name: Create user
+      user:
+        name: "nuria"
+        group: users
+        groups: power,storage,wheel
+        append: yes
+
+    - name: Install nvm
+      ansible.builtin.shell: >
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+      become: yes
+      become_method: sudo
+      become_user: nuria
