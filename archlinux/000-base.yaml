@@ -80,3 +80,26 @@
         name: bluetooth
         enabled: yes
         state: started
+
+    - name: Set timezone to Europa/España
+      community.general.timezone:
+        name: Europe/Madrid
+
+    - name: Install chrony
+      package:
+        name: chrony
+
+    - name: Configure chrony
+      ansible.builtin.copy:
+        dest: /etc/chrony.conf
+        content: |
+          pool pool.ntp.org iburst maxsources 4 offline
+          server time.cloudflare.com iburst nts
+          makestep 1.0 3
+          rtcsync
+
+    - name: Start and enable chrony
+      service:
+        name: chronyd
+        state: started
+        enabled: true
