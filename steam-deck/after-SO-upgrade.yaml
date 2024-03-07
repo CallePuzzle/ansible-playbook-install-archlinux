@@ -1,0 +1,54 @@
+---
+- name: Configure Steam Desk Desktop
+  hosts: localhost
+  tasks:
+
+    - name: Disable readonly steamos
+      command: steamos-readonly disable
+      become: yes
+      become_method: sudo
+
+    - name: Pacman key init
+      command: pacman-key --init
+      become: yes
+      become_method: sudo
+
+    - name: Pacman key populate
+      command: pacman-key --populate
+      become: yes
+      become_method: sudo
+
+    - name: Create link /opt/firefox/firefox /usr/bin/firefox
+      file:
+        src: /opt/firefox/firefox
+        dest: /usr/bin/firefox
+        state: link
+      become: yes
+      become_method: sudo
+
+    - name: Reinstall packages with --overwrite="*"
+      pacman:
+        name: "{{ item }}"
+        state: latest
+        extra_args: --overwrite="*"
+      become: yes
+      become_method: sudo
+      with_items:
+        - leafpad
+        - terminator
+        - vlc
+        - the_silver_searcher
+        - nextcloud-client
+        - wget
+        - git
+        - rsync
+        - emacs
+        - btop
+        - audacity
+        - obsidian
+        - noto-fonts-emoji # tasks' icons
+        - telegram-desktop
+        - kcalc
+        - sshpass
+        - transmission-qt
+        - solaar
