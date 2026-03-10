@@ -16,8 +16,11 @@
         name:
           - sof-firmware
 
-
     - name: Firmware
       kewlfft.aur.aur:
         use: yay
         name: upd72020x-fw
+
+    - name: Install TLP
+      pacman:
+        

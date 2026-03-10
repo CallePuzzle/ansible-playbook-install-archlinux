@@ -54,3 +54,5 @@
 
     - name: Install terraform with tfenv
       shell: tfenv install latest && tfenv use latest
+
+# kubectl helm
