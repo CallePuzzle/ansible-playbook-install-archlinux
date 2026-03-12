@@ -12,6 +12,14 @@ $ source .venv/bin/activate
 $ pip install ansible
 ```
 
+## Install Collections
+
+Some modules require external collections. Install them with:
+
+```bash
+$ ansible-galaxy collection install community.crypto
+```
+
 ## Laptop
 
 Download the latest Arch Linux ISO and write it to a USB stick.
