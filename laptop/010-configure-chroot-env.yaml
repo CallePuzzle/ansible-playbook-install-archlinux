@@ -93,3 +93,13 @@
     # 28  pacman -S efibootmgr
     # 29  efibootmgr --create --disk /dev/nvme0n1 --part 1     --label "Arch Linux"     --loader "EFI\\Linux\\vmlinuz-linux"     --unicode "root=/dev/mapper/Vol-root rw cryptdevice=/dev/nvme0n1p2:cryptlvm initrd=EFI\\Linux\\initramfs-linux.img"
     # 30  efibootmgr -v
+    #
+    # # Ver entrada actual
+    # efibootmgr -v
+    # # Borrar entrada anterior
+    # efibootmgr -b 0000 -B
+    # # Crear nueva con los parámetros del teclado
+    # efibootmgr --create --disk /dev/nvme0n1 --part 1 \
+    #     --label "Arch Linux" \
+    #     --loader "EFI\\Linux\\vmlinuz-linux" \
+    #     --unicode "root=/dev/mapper/Vol-root rw rd.luks.uuid=efdb1633-18f4-492a-81cd-578dd3bc7c9c rd.luks.options=discard i8042.reset i8042.nomux i8042.nopnp i8042.noloop loglevel=3 quiet initrd=EFI\\Linux\\initramfs-linux.img"
