@@ -23,6 +23,26 @@
           - telegram-desktop
           - kcalc
           - sshpass
+
+                    - dolphin
+          - spectacle
+          - okular
+          - gwenview
+          - unzip
+          - ark
+          - bluedevil
+          - bluez
+          - bluez-libs
+          - bluez-utils
+          - pulseaudio-bluetooth
+          - htop
+          - cups
+          - libcups
+          - print-manager
+          - bind-tools
+          - nfs-utils
+          - usbutils
+          - python-virtualenv
       become: yes
       become_method: sudo
 

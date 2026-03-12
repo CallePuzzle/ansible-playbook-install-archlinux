@@ -12,6 +12,7 @@
         group: users
         groups: power,storage,wheel
         append: yes
+        password: "{{ user_password_hash }}"
 
     - name: Add user to sudoers
       community.general.sudoers:
@@ -39,10 +40,8 @@
     - name: Install X
       pacman:
         name:
-          - xf86-video-intel
-          - xorg-xwayland
+          - mesa
           - plasma
-          - plasma-wayland-session
 
     - name: Enable X
       service:
@@ -55,31 +54,9 @@
     - name: Install necessary packages
       pacman:
         name:
-          - dolphin
-          - spectacle
-          - okular
-          - gwenview
-          - unzip
-          - ark
-          - bluedevil
-          - bluez
-          - bluez-libs
-          - bluez-utils
-          - pulseaudio-bluetooth
           - htop
-          - cups
-          - libcups
-          - print-manager
           - bind-tools
-          - nfs-utils
           - usbutils
-          - python-virtualenv
-
-    - name: Start and enable bluetooth
-      service:
-        name: bluetooth
-        enabled: yes
-        state: started
 
     - name: Set timezone to Europa/España
       community.general.timezone:
