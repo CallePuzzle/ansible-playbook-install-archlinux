@@ -4,11 +4,8 @@
   vars:
     ansible_ssh_user: root
   tasks:
-
-    # using ansible 2.10
-    # https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/crypto/luks_device.py
     - name: Create and open the LUKS container
-      luks_device:
+      community.crypto.luks_device:
         device: "{{ luks_device.device }}"
         state: "opened"
         name: "{{ luks_device.name }}"
