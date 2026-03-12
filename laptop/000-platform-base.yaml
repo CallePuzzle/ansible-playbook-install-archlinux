@@ -4,7 +4,6 @@
   vars:
     ansible_ssh_user: root
   tasks:
-
     - name: Create partition 1
       parted:
         device: "{{ disk_name }}"
@@ -69,7 +68,7 @@
       file:
         path: /mnt/boot/
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Mount boot partition
       mount:
@@ -88,7 +87,7 @@
       when: swap_on.stdout_lines|length == 0
 
     - name: Install the base packages
-      command: "pacstrap /mnt base base-devel linux linux-firmware"
+      command: "pacstrap -K /mnt base base-devel linux linux-firmware"
 
     - name: Generate fstab
       command: "genfstab -U /mnt >> /mnt/etc/fstab"
