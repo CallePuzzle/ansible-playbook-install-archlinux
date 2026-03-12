@@ -26,4 +26,6 @@ lvm_partitions:
     type: ext4
     path: /
 
+cpu_vendor: amd
+
 user_name: cesar

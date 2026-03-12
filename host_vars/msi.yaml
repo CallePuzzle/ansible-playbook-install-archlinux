@@ -25,4 +25,6 @@ lvm_partitions:
     type: ext4
     path: /
 
+cpu_vendor: intel
+
 user_name: cesar
