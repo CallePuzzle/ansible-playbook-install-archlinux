@@ -26,16 +26,22 @@
       pacman:
         name: pacman-contrib
 
+    - name: Check if mirrorlist backup exists
+      stat:
+        path: /etc/pacman.d/mirrorlist.backup
+      register: mirrorlist_backup
+
     - name: Create mirrorlist backup
       copy:
         src: /etc/pacman.d/mirrorlist
         dest: /etc/pacman.d/mirrorlist.backup
         remote_src: yes
-      when: false # TODO idempotence
+      when: not mirrorlist_backup.stat.exists
 
     - name: Rank mirrorlist
-      command: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
-      when: false # TODO idempotence
+      shell: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
+      when: not mirrorlist_backup.stat.exists
+      changed_when: true
 
     - name: Install X
       pacman:
