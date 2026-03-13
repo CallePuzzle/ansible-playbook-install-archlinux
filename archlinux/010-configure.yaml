@@ -5,7 +5,7 @@
     - name: Install necessary packages
       pacman:
         name:
-          - leafpad
+          - featherpad
           - vlc
           - the_silver_searcher
           - nextcloud-client
@@ -31,7 +31,6 @@
           - bluez
           - bluez-libs
           - bluez-utils
-          - pulseaudio-bluetooth
           - htop
           - cups
           - libcups

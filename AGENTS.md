@@ -1,65 +1,295 @@
 # AGENTS.md - Ansible Playbook for Arch Linux Installation
 
-## Overview
+## Project Overview
 
-This repository contains Ansible playbooks for installing and configuring Arch Linux on various devices:
-- **laptop/**: Playbooks for initial Arch Linux installation via chroot
-- **archlinux/**: Post-installation configuration (user setup, desktop environment, AUR packages)
-- **steam-deck/**: Steam Deck desktop mode configuration
+This repository contains Ansible playbooks for automating the installation and configuration of Arch Linux on various devices. It supports two main use cases:
+
+1. **Fresh Arch Linux Installation** (`laptop/`): For installing Arch Linux from scratch on bare metal with LUKS encryption, LVM, and EFI boot
+2. **Post-Installation Configuration** (`archlinux/`): For configuring user environment, desktop settings, and applications after base installation
+3. **Steam Deck Configuration** (`steam-deck/`): For enabling desktop mode on Steam Deck devices running SteamOS
+
+### Supported Hosts
+
+| Host | Type | Description |
+|------|------|-------------|
+| `msi` | Laptop | MSI Modern 15 - Intel-based laptop |
+| `tuxedo` | Laptop | Tuxedo device - AMD-based laptop |
+| `desk` | Steam Deck | Steam Deck in desktop mode |
+
+### Technology Stack
+
+- **Automation**: Ansible (Core)
+- **Encryption**: LUKS2 for full disk encryption
+- **Volume Management**: LVM2 with logical volumes for swap and root
+- **Boot**: EFI with systemd-boot style configuration via efibootmgr
+- **Desktop Environment**: KDE Plasma with SDDM display manager
+- **Shell**: Fish with fisher plugin manager
+- **Editor**: Zed (primary), Emacs
 
 ## Project Structure
 
 ```
-├── inventory.ini           # Ansible inventory with host definitions
-├── archlinux/              # Main configuration playbooks (numbered for order)
-│   ├── 000-base.yaml       # Base system configuration
-│   ├── 010-configure.yaml # System configuration
-│   ├── 020-msi.yaml        # MSI-specific settings
-│   ├── 030-nas.yaml        # NAS configuration
-│   ├── 040-aur.yaml        # AUR package installation
-│   ├── 050-developer.yaml  # Developer tools
-│   ├── 100-configure-arch-linux.yaml  # Final configuration
-│   └── 110-nuria.yaml      # User-specific settings
-├── laptop/                 # Installation playbooks
-├── steam-deck/             # Steam Deck configuration
-├── files/                  # Config files to deploy
-├── host_vars/              # Host-specific variables
-└── .vault-password-file    # Ansible vault password (not in git)
+.
+├── inventory.ini              # Main inventory defining all hosts
+├── .vault-password-file       # Ansible vault password (excluded from git)
+├── .gitignore                 # Excludes .venv and .vault-password-file
+│
+├── archlinux/                 # Post-installation configuration playbooks
+│   ├── 000-base.yaml          # Base system: user creation, Xorg/Plasma, mirror ranking
+│   ├── 010-configure.yaml     # User environment: packages, KDE settings, fish, SSH
+│   └── 020-developer.yaml     # Developer tools: Zed editor configuration
+│
+├── laptop/                    # Fresh installation playbooks (run from Arch ISO)
+│   ├── 000-platform-base.yaml # Disk partitioning, LUKS, LVM, base packages
+│   ├── 005-mount-the-installation.yaml  # Mount existing installation
+│   └── 010-configure-chroot-env.yaml    # Chroot configuration, bootloader
+│
+├── steam-deck/                # Steam Deck specific playbooks
+│   ├── playbook.yaml          # Initial desktop mode setup
+│   └── after-SO-upgrade.yaml  # Reinstall packages after SteamOS updates
+│
+├── host_vars/                 # Host-specific variables (encrypted with vault)
+│   ├── msi.yaml              # MSI laptop: disk config, LUKS passwords, user hashes
+│   └── tuxedo.yaml           # Tuxedo device: similar configuration
+│
+└── files/                     # Static files to deploy
+    ├── git.config            # Git configuration template
+    ├── id_rsa                # SSH private key (sensitive)
+    ├── id_rsa.pub            # SSH public key
+    ├── id_ed25519            # SSH Ed25519 private key (sensitive)
+    └── id_ed25519.pub        # SSH Ed25519 public key
 ```
 
-## Build/Lint/Test Commands
+## Setup and Dependencies
 
-### Setup Dependencies
+### Initial Setup
 
 ```bash
-# Create virtual environment
+# Create Python virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Install Ansible
 pip install ansible
 
-# Install required collections
-ansible-galaxy collection install community.crypto kewlfft.aur
+# Install required Ansible collections
+ansible-galaxy collection install community.crypto community.general kewlfft.aur
 ```
 
-### Running Playbooks
-
-**Important:** Always activate the virtual environment first:
-
+**Important**: Always activate the virtual environment before running playbooks:
 ```bash
 source .venv/bin/activate
 ```
 
-Then run playbooks:
+## Running Playbooks
+
+### Laptop Fresh Installation
+
+This is a two-phase process run from the Arch Linux Live ISO:
 
 ```bash
-# Dry run (check mode)
-ansible-playbook -i inventory.ini --vault-password-file .vault-password-file --check archlinux/000-base.yaml
+# Phase 1: Partition, encrypt, and install base system
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file laptop/000-platform-base.yaml -k
 
-# Run specific playbook with vault password
-ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/000-base.yaml -kK
+# Phase 2: Configure chroot environment and bootloader
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file laptop/010-configure-chroot-env.yaml -k
+```
 
-# Run with tags
-ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/040-aur.yaml -kK --tags installation
+After installation, exit chroot and reboot:
+```bash
+root@archiso# exit
+root@archiso# reboot
+```
+
+### Post-Installation Configuration
+
+After the base system is installed and rebooted:
+
+```bash
+# First run (as root, requires SSH root login temporarily enabled)
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/000-base.yaml -k
+
+# Subsequent runs (as user with sudo)
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/010-configure.yaml -kK
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/020-developer.yaml -kK
+```
+
+### Steam Deck Configuration
+
+```bash
+# Initial desktop mode setup
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file steam-deck/playbook.yaml -kK
+
+# After SteamOS upgrades (reinstalls packages)
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file steam-deck/after-SO-upgrade.yaml -kK
+```
+
+## Host Variables Structure
+
+Host variables in `host_vars/` define device-specific configuration:
+
+```yaml
+# Disk configuration
+disk_name: "/dev/nvme0n1"
+boot_partition: "/dev/nvme0n1p1"
+boot_partition_size: "512MiB"
+
+# LUKS encryption settings
+luks_device:
+  device: "/dev/nvme0n1p2"
+  name: "cryptlvm"
+  type: "luks2"
+  uuid: "..."  # Optional, for boot cmdline
+
+# Encrypted passphrase (ansible-vault encrypted)
+luks_device_passphrase: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  ...
+
+# LVM partitions
+lvm_partitions:
+  - name: swap
+    size: 16g        # Or 8g depending on host
+    type: swap
+  - name: root
+    size: "100%FREE"
+    type: ext4
+    path: /
+
+# Hardware settings
+cpu_vendor: intel    # or amd
+
+# User settings
+user_name: cesar
+
+# Encrypted password hashes (ansible-vault encrypted)
+root_password_hash: !vault | ...
+user_password_hash: !vault | ...
+```
+
+## Security Considerations
+
+### Vault Usage
+
+Sensitive data is encrypted with Ansible Vault:
+- LUKS passphrases
+- Root and user password hashes
+- SSH private keys (in `files/`)
+
+**Managing vault secrets:**
+
+```bash
+# Encrypt a string for use in variables
+ansible-vault encrypt_string 'your_value' --name 'variable_name'
+
+# Edit encrypted file
+ansible-vault edit host_vars/msi.yaml
+
+# View encrypted file
+ansible-vault view host_vars/msi.yaml
+```
+
+### Password Hash Generation
+
+Generate SHA-512 password hashes for vault storage:
+
+```bash
+# Using openssl (recommended)
+openssl passwd -6
+
+# Or using mkpasswd
+mkpasswd --method=SHA-512
+```
+
+**Important**: Store hashes without trailing newlines. Use the `trim` filter in playbooks:
+```yaml
+password: "{{ user_password_hash | trim }}"
+```
+
+### SSH Keys
+
+The `files/` directory contains SSH private keys that are deployed to hosts:
+- `id_rsa` and `id_ed25519`: Private keys (mode 0600)
+- `id_rsa.pub` and `id_ed25519.pub`: Public keys
+
+These are git-tracked but marked as sensitive. Ensure proper permissions.
+
+## Code Style Guidelines
+
+### YAML Conventions
+
+- **File naming**: Use 3-digit prefix for ordering (e.g., `000-base.yaml`)
+- **Document start**: Always use `---` at the beginning
+- **Indentation**: 2 spaces (Ansible requirement)
+- **Key ordering**: name, hosts, vars, tasks
+
+### Playbook Structure
+
+```yaml
+---
+- name: Descriptive play name
+  hosts: all
+  vars:
+    variable_name: value
+  become: yes
+  become_method: sudo
+  tags:
+    - tagname
+  tasks:
+    - name: Task description
+      module_name:
+        option1: value
+        option2: value
+```
+
+### Module Usage
+
+- **Prefer native modules** over `command`/`shell` when possible
+- **FQCN (Fully Qualified Collection Names)** for clarity:
+  - `community.crypto.luks_device`
+  - `community.general.timezone`
+  - `ansible.builtin.copy`
+- **Use `remote_src: yes`** for operations on remote files
+
+### Idempotency
+
+- Use modules that support idempotency (`pacman`, `service`, `copy`, etc.)
+- Avoid `command`/`shell` unless necessary
+- For non-idempotent commands, use `changed_when` and `failed_when`
+
+Example:
+```yaml
+- name: Rank mirrorlist
+  shell: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
+  when: not mirrorlist_backup.stat.exists
+  changed_when: true
+```
+
+### Tags
+
+Use tags for selective execution:
+- `installation`: Initial installation tasks
+- `packages`: Package installation
+- `configuration`: System configuration
+- `ssh`: SSH key deployment
+
+## Testing and Validation
+
+### Syntax Checking
+
+```bash
+# Check playbook syntax
+ansible-playbook --syntax-check archlinux/000-base.yaml
+
+# List all tasks without executing
+ansible-playbook -i inventory.ini --list-tasks archlinux/000-base.yaml
+```
+
+### Dry Run (Check Mode)
+
+```bash
+# Check mode - shows what would change without applying
+ansible-playbook -i inventory.ini --vault-password-file .vault-password-file --check archlinux/010-configure.yaml -kK
 ```
 
 ### Linting
@@ -75,130 +305,32 @@ ansible-lint archlinux/000-base.yaml
 ansible-lint
 ```
 
-### Syntax Checking
+## Troubleshooting
 
-```bash
-# Check playbook syntax
-ansible-playbook --syntax-check archlinux/000-base.yaml
+### Common Issues
 
-# List all tasks without executing
-ansible-playbook -i inventory.ini --list-tasks archlinux/000-base.yaml
-```
+1. **SSH connection failures**: Ensure target host has SSH running and credentials are correct
+2. **Vault password errors**: Verify `.vault-password-file` contains correct password
+3. **Collection not found**: Run `ansible-galaxy collection install` for required collections
+4. **Permission denied**: Use `-k` for SSH password or `-kK` for both SSH and sudo passwords
 
-## Code Style Guidelines
+### Inventory Connection Details
 
-### YAML Structure
+From `inventory.ini`:
+- `msi`: localhost (used during chroot/installation), user: cesar
+- `tuxedo`: 192.168.1.134, user: cesar
+- `desk`: 192.168.22.25, user: deck
 
-- **File naming**: Use 3-digit prefix + descriptive name (e.g., `010-configure.yaml`)
-- **Document start**: Always use `---` at the beginning of each YAML file
-- **Indentation**: 2 spaces (Ansible requirement)
-- **Key ordering**: name, hosts, vars, tasks, handlers, roles
+All hosts use `StrictHostKeyChecking=no` for easier automation.
 
-### Playbook Conventions
+## Workflow Summary
 
-```yaml
----
-- name: Descriptive play name       # Required: describes what this play does
-  hosts: all                        # Target hosts
-  vars:                             # Play-specific variables
-    variable_name: value
-  become: yes                       # Use privilege escalation when needed
-  become_method: sudo              # Method for privilege escalation
-  tags:
-    - tagname                      # Tag plays/tasks for selective execution
-  tasks:
-    - name: Task description       # Required: describes the task
-      module_name:
-        option1: value
-        option2: value
-```
+1. **New laptop setup**:
+   - Boot Arch ISO → Start SSH → Run `laptop/000-platform-base.yaml` → Run `laptop/010-configure-chroot-env.yaml` → Reboot
+   - Run `archlinux/000-base.yaml` → Run `archlinux/010-configure.yaml` → Run `archlinux/020-developer.yaml`
 
-### Module Usage
+2. **Steam Deck setup**:
+   - Switch to desktop mode → Run `steam-deck/playbook.yaml` → Run `archlinux/` playbooks
 
-- **FQB module names**: Use fully qualified names when ambiguous:
-  - `ansible.builtin.copy` (not just `copy`)
-  - `ansible.builtin.git` (not just `git`)
-- **Prefer native modules**: Use `package`, `service`, `user` over `command` when possible
-- **Remote modules**: Use `remote_src: yes` for copy/template operations from remote
-
-### Variable Naming
-
-- **Variable names**: snake_case (e.g., `user_name`, `package_list`)
-- **Host variables**: Define in `host_vars/` directory per host
-- **Vault secrets**: Store sensitive data in vault-encrypted files
-
-### Idempotency
-
-- **Always**: Use Ansible modules that support idempotency (package, service, copy, etc.)
-- **Avoid**: `command` and `shell` modules unless absolutely necessary
-- **when conditions**: Use `changed_when` and `check_mode` for command idempotency
-- **Known issues**: Document non-idempotent tasks with `# TODO idempotence` comment
-
-### Error Handling
-
-- **Ignore errors**: Use `ignore_errors: yes` sparingly and with comment explaining why
-- **Failed when**: Use `failed_when` for complex error conditions
-- **Until/retry**: Use `until`, `retries`, `delay` for retry logic
-
-### Tags
-
-Use tags for selective execution:
-- `installation`: Initial installation tasks
-- `packages`: Package installation
-- `configuration`: System configuration
-- `always`: Tasks that should always run
-
-### Privilege Escalation
-
-```yaml
-- name: Task requiring root
-  become: yes
-  become_method: sudo
-  # task content
-```
-
-### Best Practices
-
-1. **Always include task names**: Required for readability and logging
-2. **Use loops sparingly**: Prefer module-native list parameters
-3. **Group related tasks**: Use blocks for related operations
-4. **Keep playbooks focused**: One playbook per concern
-5. **Use role defaults**: Define defaults in roles for optional behavior
-
-### Vault
-
-```bash
-# Encrypt a file
-ansible-vault encrypt secrets.yaml
-
-# Edit encrypted file
-ansible-vault edit secrets.yaml
-
-# View encrypted file
-ansible-vault view secrets.yaml
-
-# Encrypt a string for use in variables
-ansible-vault encrypt_string 'your_value' --name 'variable_name'
-```
-
-### Password Hashing
-
-When storing password hashes in vault variables, ensure the hash is generated correctly:
-
-```bash
-# Generate SHA-512 password hash (recommended)
-openssl passwd -6
-
-# Or using mkpasswd
-mkpasswd --method=SHA-512
-
-# Important: Store the hash without trailing newlines
-# When using in playbooks, use the trim filter to handle accidental newlines:
-# password: "{{ user_password_hash | trim }}"
-```
-
-### Gitignore
-
-The following are ignored:
-- `.vault-password-file` - Vault password
-- `.venv/` - Python virtual environment
+3. **After SteamOS update**:
+   - Run `steam-deck/after-SO-upgrade.yaml` to restore packages
