@@ -43,6 +43,14 @@ ansible-galaxy collection install community.crypto kewlfft.aur
 
 ### Running Playbooks
 
+**Important:** Always activate the virtual environment first:
+
+```bash
+source .venv/bin/activate
+```
+
+Then run playbooks:
+
 ```bash
 # Dry run (check mode)
 ansible-playbook -i inventory.ini --vault-password-file .vault-password-file --check archlinux/000-base.yaml
@@ -168,6 +176,25 @@ ansible-vault edit secrets.yaml
 
 # View encrypted file
 ansible-vault view secrets.yaml
+
+# Encrypt a string for use in variables
+ansible-vault encrypt_string 'your_value' --name 'variable_name'
+```
+
+### Password Hashing
+
+When storing password hashes in vault variables, ensure the hash is generated correctly:
+
+```bash
+# Generate SHA-512 password hash (recommended)
+openssl passwd -6
+
+# Or using mkpasswd
+mkpasswd --method=SHA-512
+
+# Important: Store the hash without trailing newlines
+# When using in playbooks, use the trim filter to handle accidental newlines:
+# password: "{{ user_password_hash | trim }}"
 ```
 
 ### Gitignore

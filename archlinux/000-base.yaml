@@ -12,7 +12,7 @@
         group: users
         groups: power,storage,wheel
         append: yes
-        password: "{{ user_password_hash }}"
+        password: "{{ user_password_hash | trim }}"
 
     - name: Add user to sudoers
       community.general.sudoers:
