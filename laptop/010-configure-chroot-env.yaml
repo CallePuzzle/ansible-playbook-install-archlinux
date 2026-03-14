@@ -89,7 +89,7 @@
         --unicode "root=/dev/mapper/Vol-root rw rd.luks.name={{ luks_device.uuid }}=cryptlvm rd.luks.options=discard initrd=EFI\\Linux\\initramfs-linux.img"
 
     - name: Install required packages
-      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd'
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd linux-headers'
 
     - name: Set root password
       command: "arch-chroot /mnt bash -c 'echo root:{{ root_password_hash }} | chpasswd -e'"

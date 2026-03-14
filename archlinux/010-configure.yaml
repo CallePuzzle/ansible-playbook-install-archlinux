@@ -11,6 +11,7 @@
           - nextcloud-client
           - wget
           - git
+          - less
           - rsync
           - emacs
           - btop
@@ -41,8 +42,44 @@
           - python-virtualenv
           - fish
           - ghostty
+          - solaar
       become: yes
       become_method: sudo
+
+    - name: Create autostart directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/autostart"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure solaar autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/solaar.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Solaar
+          Exec=solaar -w hide-only
+          Icon=solaar
+          Comment=Logitech device manager
+          X-GNOME-Autostart-enabled=true
+
+    - name: Configure nextcloud-client autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/nextcloud.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Nextcloud
+          GenericName=File Synchronizer
+          Exec=/usr/bin/nextcloud --background
+          Icon=Nextcloud
+          Categories=Network
+          StartupNotify=false
+          X-GNOME-Autostart-enabled=true
+          X-GNOME-Autostart-Delay=10
 
     - name: Configure git
       copy:
