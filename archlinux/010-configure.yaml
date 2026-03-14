@@ -46,6 +46,14 @@
       become: yes
       become_method: sudo
 
+    - name: Enable bluetooth service
+      ansible.builtin.systemd:
+        name: bluetooth
+        enabled: yes
+        state: started
+      become: yes
+      become_method: sudo
+
     - name: Create autostart directory
       file:
         path: "/home/{{ ansible_ssh_user }}/.config/autostart"
