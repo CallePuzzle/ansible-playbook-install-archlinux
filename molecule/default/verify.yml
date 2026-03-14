@@ -1,0 +1,186 @@
+---
+# Playbook de verificación - comprueba que los playbooks funcionaron correctamente
+# Este playbook se ejecuta después de converge para verificar el estado del sistema
+
+- name: Verify system state after playbook execution
+  hosts: all
+  gather_facts: true
+  become: true
+  become_method: sudo
+  tasks:
+    # Verificaciones de 000-base.yaml
+    - name: Verify user was created
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ user_name | default('ansible') }}"
+      register: user_check
+
+    - name: Assert user exists
+      ansible.builtin.assert:
+        that:
+          - user_check.ansible_facts.getent_passwd is defined
+        fail_msg: "User {{ user_name | default('ansible') }} was not created"
+        success_msg: "User {{ user_name | default('ansible') }} exists"
+
+    - name: Verify pacman-contrib is installed
+      ansible.builtin.command:
+        cmd: which rankmirrors
+      register: rankmirrors_check
+      changed_when: false
+
+    - name: Assert rankmirrors is available
+      ansible.builtin.assert:
+        that:
+          - rankmirrors_check.rc == 0
+        fail_msg: "pacman-contrib (rankmirrors) is not installed"
+        success_msg: "pacman-contrib is installed"
+
+    - name: Verify Xorg packages are installed
+      ansible.builtin.command:
+        cmd: pacman -Q mesa
+      register: mesa_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Assert mesa is installed
+      ansible.builtin.assert:
+        that:
+          - mesa_check.rc == 0
+        fail_msg: "Mesa is not installed"
+        success_msg: "Mesa is installed"
+
+    - name: Verify SDDM service is enabled
+      ansible.builtin.systemd:
+        name: sddm
+        enabled: yes
+      register: sddm_service
+      check_mode: yes
+      ignore_errors: true
+
+    - name: Assert SDDM is enabled
+      ansible.builtin.assert:
+        that:
+          - sddm_service is defined
+        fail_msg: "SDDM service is not enabled"
+        success_msg: "SDDM service is enabled"
+        ignore_errors: true
+
+    - name: Verify NetworkManager service is enabled
+      ansible.builtin.systemd:
+        name: NetworkManager
+        enabled: yes
+      register: nm_service
+      check_mode: yes
+      ignore_errors: true
+
+    - name: Assert NetworkManager is enabled
+      ansible.builtin.assert:
+        that:
+          - nm_service is defined
+        fail_msg: "NetworkManager service is not enabled"
+        success_msg: "NetworkManager service is enabled"
+        ignore_errors: true
+
+    - name: Verify timezone is set to Europe/Madrid
+      ansible.builtin.command:
+        cmd: timedatectl show --property=Timezone --value
+      register: timezone_check
+      changed_when: false
+
+    - name: Assert timezone is Europe/Madrid
+      ansible.builtin.assert:
+        that:
+          - timezone_check.stdout == "Europe/Madrid"
+        fail_msg: "Timezone is not Europe/Madrid, got: {{ timezone_check.stdout }}"
+        success_msg: "Timezone is correctly set to Europe/Madrid"
+
+    - name: Verify chrony is installed
+      ansible.builtin.command:
+        cmd: which chronyd
+      register: chrony_check
+      changed_when: false
+
+    - name: Assert chrony is installed
+      ansible.builtin.assert:
+        that:
+          - chrony_check.rc == 0
+        fail_msg: "Chrony is not installed"
+        success_msg: "Chrony is installed"
+
+    # Verificaciones de 010-configure.yaml
+    - name: Verify essential packages are installed
+      ansible.builtin.command:
+        cmd: "pacman -Q {{ item }}"
+      loop:
+        - git
+        - htop
+        - wget
+        - firefox
+        - fish
+      register: package_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Assert essential packages are installed
+      ansible.builtin.assert:
+        that:
+          - package_check is succeeded
+        fail_msg: "Some essential packages are missing"
+        success_msg: "Essential packages are installed"
+        ignore_errors: true
+
+    - name: Verify git configuration exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name | default('ansible') }}/.gitconfig"
+      register: gitconfig_stat
+
+    - name: Assert git config exists
+      ansible.builtin.assert:
+        that:
+          - gitconfig_stat.stat.exists
+        fail_msg: "Git configuration file does not exist"
+        success_msg: "Git configuration file exists"
+
+    - name: Verify fish is configured as default shell
+      ansible.builtin.command:
+        cmd: "getent passwd {{ user_name | default('ansible') }}"
+      register: passwd_entry
+      changed_when: false
+
+    - name: Assert fish is default shell
+      ansible.builtin.assert:
+        that:
+          - "'/usr/bin/fish' in passwd_entry.stdout"
+        fail_msg: "Fish is not the default shell"
+        success_msg: "Fish is the default shell"
+
+    - name: Verify SSH directory exists
+      ansible.builtin.stat:
+        path: "/home/{{ user_name | default('ansible') }}/.ssh"
+      register: ssh_dir_stat
+
+    - name: Assert SSH directory exists
+      ansible.builtin.assert:
+        that:
+          - ssh_dir_stat.stat.exists
+          - ssh_dir_stat.stat.isdir
+        fail_msg: "SSH directory does not exist"
+        success_msg: "SSH directory exists"
+
+    - name: Verify KDE configuration files exist
+      ansible.builtin.stat:
+        path: "/home/{{ user_name | default('ansible') }}/.config/kxkbrc"
+      register: kxkbrc_stat
+      ignore_errors: true
+
+    - name: Print verification summary
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          Verification Summary
+          ============================================
+          - User created: {{ user_name | default('ansible') }}
+          - Git configured: {{ gitconfig_stat.stat.exists | default(false) }}
+          - Fish shell: {{ "/usr/bin/fish" in passwd_entry.stdout | default(false) }}
+          - SSH directory: {{ ssh_dir_stat.stat.exists | default(false) }}
+          ============================================

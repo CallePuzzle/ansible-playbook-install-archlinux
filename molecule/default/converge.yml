@@ -1,0 +1,61 @@
+---
+# Playbook de converge - ejecuta los playbooks de archlinux/
+# Este playbook importa y ejecuta los playbooks que queremos testear
+
+- name: Converge - Base installation
+  hosts: all
+  gather_facts: true
+  become: true
+  become_method: sudo
+  vars:
+    # Variables necesarias para los playbooks
+    ansible_ssh_user: "{{ user_name | default('ansible') }}"
+  tasks:
+    # Incluir el playbook de base (000-base.yaml)
+    - name: Include base playbook
+      include_tasks: ../../archlinux/000-base.yaml
+      vars:
+        ansible_ssh_user: "{{ user_name | default('ansible') }}"
+      tags:
+        - base
+
+- name: Converge - Configuration
+  hosts: all
+  gather_facts: true
+  become: true
+  become_method: sudo
+  vars:
+    ansible_ssh_user: "{{ user_name | default('ansible') }}"
+  tasks:
+    # Incluir el playbook de configuración (010-configure.yaml)
+    - name: Include configure playbook
+      include_tasks: ../../archlinux/010-configure.yaml
+      tags:
+        - configure
+  
+  # Nota: Los playbooks 020-developer.yaml y 030-aur.yaml pueden requerir
+  # configuración adicional o ser testeados por separado
+
+# Para testear los playbooks individualmente, se pueden comentar
+# las secciones anteriores y descomentar las siguientes:
+#
+# - name: Converge - Developer tools
+#   hosts: all
+#   gather_facts: true
+#   become: true
+#   become_method: sudo
+#   tasks:
+#     - name: Include developer playbook
+#       include_tasks: ../../archlinux/020-developer.yaml
+#
+# - name: Converge - AUR packages
+#   hosts: all
+#   gather_facts: true
+#   become: true
+#   become_method: sudo
+#   vars:
+#     aur_packages:
+#       - yay
+#   tasks:
+#     - name: Include AUR playbook
+#       include_tasks: ../../archlinux/030-aur.yaml

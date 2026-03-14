@@ -305,6 +305,103 @@ ansible-lint archlinux/000-base.yaml
 ansible-lint
 ```
 
+## Testing with Molecule
+
+The project uses **Molecule** with **Podman** for automated testing of Ansible playbooks in isolated Arch Linux containers.
+
+### Why Molecule + Podman?
+
+- **Rootless containers**: No daemon required, more secure
+- **systemd support**: Can test service management (SDDM, NetworkManager, etc.)
+- **Idempotency testing**: Automatically verifies playbooks can run multiple times without changes
+- **Fast feedback**: Test changes locally before deploying to real hardware
+
+### Setup
+
+```bash
+# Ensure virtual environment is activated
+source .venv/bin/activate
+
+# Install testing dependencies (already included in requirements)
+pip install molecule molecule-podman ansible-compat
+
+# Ensure podman is installed on your system
+sudo pacman -S podman
+```
+
+### Test Structure
+
+```
+molecule/
+└── default/
+    ├── molecule.yml      # Main configuration (platforms, provisioner, verifier)
+    ├── Dockerfile        # Arch Linux image with systemd
+    ├── create.yml        # Create test container
+    ├── destroy.yml       # Destroy test container
+    ├── prepare.yml       # Prepare container (users, sudo, packages)
+    ├── converge.yml      # Execute playbooks under test
+    └── verify.yml        # Verify expected state after execution
+```
+
+### Running Tests
+
+```bash
+# Run full test sequence (destroy → create → prepare → converge → idempotence → verify → destroy)
+molecule test
+
+# Run specific steps during development
+molecule create      # Create and start the container
+molecule prepare     # Run prepare playbook
+molecule converge    # Run playbooks under test
+molecule idempotence # Verify idempotency (run converge again, expect no changes)
+molecule verify      # Run verification tests
+molecule destroy     # Clean up container
+
+# Login to container for debugging
+molecule login
+
+# Run with verbose output
+molecule --debug test
+```
+
+### Test Configuration
+
+The default scenario tests:
+1. **000-base.yaml**: User creation, Xorg/Plasma installation, timezone, services
+2. **010-configure.yaml**: Packages, KDE settings, fish shell, SSH keys
+
+To test individual playbooks, edit `molecule/default/converge.yml` and comment/uncomment the appropriate `include_tasks` sections.
+
+### Adding New Tests
+
+To add verifications to `verify.yml`:
+
+```yaml
+- name: Verify specific condition
+  ansible.builtin.assert:
+    that:
+      - some_condition_is_met
+    fail_msg: "Descriptive error message"
+    success_msg: "Success message"
+```
+
+### CI/CD Integration
+
+For GitHub Actions or similar CI:
+
+```yaml
+- name: Run Molecule tests
+  run: |
+    source .venv/bin/activate
+    molecule test
+```
+
+### Known Limitations
+
+- **AUR packages**: Building AUR packages in containers requires `base-devel` and can be slow
+- **GUI applications**: Services like SDDM can be enabled but won't start properly without a display
+- **Hardware-specific tasks**: Tasks depending on specific hardware (Bluetooth, graphics) may need mocking
+
 ## Troubleshooting
 
 ### Common Issues

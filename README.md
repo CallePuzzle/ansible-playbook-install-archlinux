@@ -17,8 +17,78 @@ $ pip install ansible
 Some modules require external collections. Install them with:
 
 ```bash
-$ ansible-galaxy collection install community.crypto
+$ ansible-galaxy collection install community.crypto community.general kewlfft.aur
 ```
+
+## Testing with Molecule
+
+This project uses Molecule with Podman for automated testing of Ansible playbooks in isolated Arch Linux containers.
+
+### Prerequisites
+
+Install Podman on your system:
+
+```bash
+$ sudo pacman -S podman
+```
+
+Install testing dependencies:
+
+```bash
+$ source .venv/bin/activate
+$ pip install molecule molecule-podman ansible-compat
+```
+
+### Running Tests
+
+Run the full test suite:
+
+```bash
+$ molecule test
+```
+
+This will:
+1. Create an Arch Linux container with systemd
+2. Prepare the environment (users, sudo, packages)
+3. Execute the playbooks under test
+4. Verify idempotency (playbooks can run multiple times without changes)
+5. Run verification tests
+6. Clean up the container
+
+### Development Workflow
+
+During development, you can run individual steps:
+
+```bash
+# Create and start the container
+$ molecule create
+
+# Run the prepare playbook (set up users, sudo, etc.)
+$ molecule prepare
+
+# Execute playbooks under test
+$ molecule converge
+
+# Verify idempotency
+$ molecule idempotence
+
+# Run verification tests
+$ molecule verify
+
+# Login to the container for debugging
+$ molecule login
+
+# Clean up when done
+$ molecule destroy
+```
+
+### Test Structure
+
+Tests are located in `molecule/default/`:
+- `molecule.yml` - Configuration (platform, provisioner, verifier)
+- `Dockerfile` - Arch Linux image with systemd
+- `converge.yml` - Playbooks to test
+- `verify.yml` - Verification tests
 
 ## Laptop
 
