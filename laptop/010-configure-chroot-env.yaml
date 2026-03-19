@@ -88,6 +88,38 @@
         --loader "EFI\\Linux\\vmlinuz-linux"
         --unicode "root=/dev/mapper/Vol-root rw rd.luks.name={{ luks_device.uuid }}=cryptlvm rd.luks.options=discard initrd=EFI\\Linux\\initramfs-linux.img"
 
+    - name: Create efistub-update.path systemd file
+      copy:
+        dest: /mnt/etc/systemd/system/efistub-update.path
+        content: |
+          [Unit]
+          Description=Copy EFISTUB Kernel to EFI system partition
+
+          [Path]
+          PathChanged=/boot/initramfs-linux-fallback.img
+
+          [Install]
+          WantedBy=multi-user.target
+          WantedBy=system-update.target
+        mode: '0644'
+
+    - name: Create efistub-update.service systemd file
+      copy:
+        dest: /mnt/etc/systemd/system/efistub-update.service
+        content: |
+          [Unit]
+          Description=Copy EFISTUB Kernel to EFI system partition
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/cp -af /boot/vmlinuz-linux /boot/EFI/Linux/
+          ExecStart=/usr/bin/cp -af /boot/initramfs-linux.img /boot/EFI/Linux/
+          ExecStart=/usr/bin/cp -af /boot/initramfs-linux-fallback.img /boot/EFI/Linux/
+        mode: '0644'
+
+    - name: Enable efistub-update.path service
+      command: arch-chroot /mnt systemctl enable efistub-update.path
+
     - name: Install required packages
       command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd linux-headers'
 
