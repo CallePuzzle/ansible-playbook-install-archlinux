@@ -3,45 +3,60 @@
   hosts: all
   vars:
     ansible_ssh_user: root
+    # VG name configurable por host_vars, default "Vol" para compatibilidad
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
   tasks:
-    - name: Create partition 1
+    - name: Create boot partition (ext4)
       parted:
         device: "{{ disk_name }}"
         number: 1
         state: present
         part_start: "0%"
         part_end: "{{ boot_partition_size }}"
-        flags: [{ name: "esp", value: "on" }]
 
-    - name: Format boot partition
+    - name: Format boot partition as ext4
       filesystem:
-        fstype: "vfat"
+        fstype: "ext4"
         dev: "{{ boot_partition }}"
 
-    - name: Create partition 2
+    - name: Create EFI partition (vfat)
       parted:
         device: "{{ disk_name }}"
         number: 2
         state: present
         part_start: "{{ boot_partition_size }}"
+        part_end: "{{ boot_partition_size | human_to_bytes | int + efi_partition_size | human_to_bytes | int }} bytes"
+        flags: [{ name: "esp", value: "on" }]
+
+    - name: Format EFI partition as vfat
+      filesystem:
+        fstype: "vfat"
+        dev: "{{ efi_partition }}"
+
+    - name: Create LUKS partition
+      parted:
+        device: "{{ disk_name }}"
+        number: 3
+        state: present
+        part_start: "{{ boot_partition_size | human_to_bytes | int + efi_partition_size | human_to_bytes | int }} bytes"
         part_end: "100%"
 
     - name: Create and open the LUKS container
       community.crypto.luks_device:
-        device: "{{ luks_device.device }}"
+        device: "{{ luks_partition }}"
         state: "opened"
         name: "{{ luks_device.name }}"
         passphrase: "{{ luks_device_passphrase }}"
         type: "{{ luks_device.type }}"
 
-    - name: Create VolGroup
+    - name: Create Volume Group
       lvg:
-        vg: Vol
+        vg: "{{ vg_name }}"
         pvs: /dev/mapper/{{ luks_device.name }}
 
-    - name: Create local storage
+    - name: Create logical volumes
       lvol:
-        vg: Vol
+        vg: "{{ vg_name }}"
         lv: "{{ item.name }}"
         size: "{{ item.size }}"
         shrink: false
@@ -51,12 +66,12 @@
     - name: Format lvm partitions
       filesystem:
         fstype: "{{ item.type }}"
-        dev: "/dev/mapper/Vol-{{ item.name }}"
+        dev: "/dev/mapper/{{ vg_name }}-{{ item.name }}"
       loop: "{{ lvm_partitions }}"
 
     - name: Mount lvm partitions
       mount:
-        src: "/dev/mapper/Vol-{{ item.name }}"
+        src: "/dev/mapper/{{ vg_name }}-{{ item.name }}"
         path: "/mnt{{ item.path }}"
         fstype: "{{ item.type }}"
         state: mounted
@@ -73,7 +88,7 @@
       mount:
         src: "{{ boot_partition }}"
         path: "/mnt/boot"
-        fstype: "vfat"
+        fstype: "ext4"
         state: mounted
 
     - name: Check if swap is on
@@ -82,7 +97,7 @@
       ignore_errors: yes
 
     - name: Swap on
-      command: "swapon -e /dev/mapper/Vol-swap"
+      command: "swapon -e /dev/mapper/{{ vg_name }}-swap"
       when: swap_on.stdout_lines|length == 0
 
     - name: Install the base packages

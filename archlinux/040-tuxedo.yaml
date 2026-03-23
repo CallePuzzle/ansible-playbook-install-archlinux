@@ -1,0 +1,89 @@
+---
+- name: Configure Tuxedo specific hardware and drivers
+  hosts: tuxedo
+  vars:
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
+  tasks:
+    # 1. Instalar drivers Tuxedo desde AUR
+    - name: Install Tuxedo drivers from AUR
+      kewlfft.aur.aur:
+        name: "{{ item }}"
+        state: present
+        use: yay
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      loop:
+        - tuxedo-drivers-dkms
+        - tuxedo-control-center-bin
+        - tuxedo-yt6801-dkms-git
+
+    # 2. Habilitar servicios Tuxedo
+    - name: Enable Tuxedo Control Center service
+      ansible.builtin.systemd:
+        name: tccd.service
+        enabled: yes
+        state: started
+      become: yes
+
+    # 3. Crear autostart para Tuxedo Control Center tray
+    - name: Create autostart directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/autostart"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure Tuxedo Control Center tray autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/tuxedo-control-center-tray.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Tuxedo Control Center
+          Exec=tuxedo-control-center --tray
+          Icon=tuxedo-control-center
+          Comment=Tuxedo Control Center Tray
+          X-GNOME-Autostart-enabled=true
+
+    # 4. Configurar kernel parameters específicos de Tuxedo
+    # Necesarios para teclado después de suspend
+    # Ref: https://wiki.archlinux.org/title/TUXEDO_InfinityBook_14_Gen10
+    - name: Get LUKS device UUID
+      ansible.builtin.command: "cryptsetup luksUUID {{ luks_partition }}"
+      register: luks_uuid_output
+      changed_when: false
+      become: yes
+
+    - name: Configure Tuxedo kernel parameters
+      lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX="'
+        line: 'GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ luks_device.uuid | default(luks_uuid_output.stdout) }}:{{ luks_device.name }} root=/dev/mapper/{{ vg_name }}-root resume=/dev/mapper/{{ vg_name }}-swap rd.luks.options=discard i8042.reset i8042.nomux i8042.nopnp i8042.noloop"'
+      become: yes
+      notify: Regenerate GRUB config
+
+    # 5. Configurar charging profile (opcional)
+    - name: Configure Tuxedo charging profile
+      ansible.builtin.command: |
+        echo "high_capacity" > /sys/bus/platform/drivers/tuxedo_keyboard/tuxedo_keyboard/charging_profile/charging_profile
+      become: yes
+      ignore_errors: yes
+
+    # 6. Añadir módulos del kernel a cargar
+    - name: Configure kernel modules for Tuxedo
+      lineinfile:
+        path: /etc/modules-load.d/tuxedo.conf
+        create: yes
+        line: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - tuxedo_keyboard
+        - tuxedo_io
+      become: yes
+
+  handlers:
+    - name: Regenerate GRUB config
+      ansible.builtin.command: grub-mkconfig -o /boot/grub/grub.cfg
+      become: yes

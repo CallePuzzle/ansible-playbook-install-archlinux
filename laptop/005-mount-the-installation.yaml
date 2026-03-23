@@ -3,10 +3,11 @@
   hosts: all
   vars:
     ansible_ssh_user: root
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
   tasks:
     - name: Create and open the LUKS container
       community.crypto.luks_device:
-        device: "{{ luks_device.device }}"
+        device: "{{ luks_partition }}"
         state: "opened"
         name: "{{ luks_device.name }}"
         passphrase: "{{ luks_device_passphrase }}"
@@ -14,7 +15,7 @@
 
     - name: Mount lvm partitions
       mount:
-        src: "/dev/mapper/Vol-{{ item.name }}"
+        src: "/dev/mapper/{{ vg_name }}-{{ item.name }}"
         path: "/mnt{{ item.path }}"
         fstype: "{{ item.type }}"
         state: mounted
@@ -25,8 +26,15 @@
       mount:
         src: "{{ boot_partition }}"
         path: "/mnt/boot"
+        fstype: "ext4"
+        state: mounted
+
+    - name: Mount EFI partition
+      mount:
+        src: "{{ efi_partition }}"
+        path: "/mnt/boot/efi"
         fstype: "vfat"
         state: mounted
 
     - name: Swap on
-      command: "swapon /dev/mapper/Vol-swap"
+      command: "swapon /dev/mapper/{{ vg_name }}-swap"

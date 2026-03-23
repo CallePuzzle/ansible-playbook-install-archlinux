@@ -1,10 +1,17 @@
 ---
 disk_name: "/dev/nvme0n1"
-boot_partition: "/dev/nvme0n1p1"
-boot_partition_size: "512MiB"
+
+# Esquema de particiones para GRUB (estilo TuxedoOS)
+boot_partition: "/dev/nvme0n1p1"      # /boot - ext4 - 1GiB
+efi_partition: "/dev/nvme0n1p2"       # /boot/efi - vfat - 512MiB
+luks_partition: "/dev/nvme0n1p3"      # Encrypted container
+
+# Tamaños de particiones
+boot_partition_size: "1GiB"
+efi_partition_size: "512MiB"
 
 luks_device:
-  device: "/dev/nvme0n1p2"
+  device: "/dev/nvme0n1p3"
   name: "cryptlvm"
   type: "luks2"
   uuid: "efdb1633-18f4-492a-81cd-578dd3bc7c9c"
@@ -17,9 +24,12 @@ luks_device_passphrase: !vault |
   6530313566666362310a383239336231383534646463396534633237303030336466356661383137
   3831
 
+# VG name (default "Vol" en playbook genérico)
+lvm_vg_name: "system"
+
 lvm_partitions:
   - name: swap
-    size: 8g
+    size: 16g
     type: swap
   - name: root
     size: "100%FREE"
