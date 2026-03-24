@@ -13,9 +13,7 @@
           - git
           - less
           - rsync
-          - emacs
           - btop
-          - firefox
           - audacity
           - obsidian
           - noto-fonts-emoji # tasks' icons

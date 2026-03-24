@@ -46,8 +46,12 @@
           X-GNOME-Autostart-enabled=true
 
     # 4. Configurar kernel parameters específicos de Tuxedo
-    # Necesarios para teclado después de suspend
+    # Necesarios para:
+    # - Teclado después de suspend (i8042.*)
+    # - AMD Radeon 860M: deshabilitar PSR y scatter/gather para evitar flickering
+    # - Mejorar batería durante sleep (acpi.ec_no_wakeup)
     # Ref: https://wiki.archlinux.org/title/TUXEDO_InfinityBook_14_Gen10
+    # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
     - name: Get LUKS device UUID
       ansible.builtin.command: "cryptsetup luksUUID {{ luks_partition }}"
       register: luks_uuid_output
@@ -58,9 +62,36 @@
       lineinfile:
         path: /etc/default/grub
         regexp: '^GRUB_CMDLINE_LINUX="'
-        line: 'GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ luks_device.uuid | default(luks_uuid_output.stdout) }}:{{ luks_device.name }} root=/dev/mapper/{{ vg_name }}-root resume=/dev/mapper/{{ vg_name }}-swap rd.luks.options=discard i8042.reset i8042.nomux i8042.nopnp i8042.noloop"'
+        line: 'GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ luks_device.uuid | default(luks_uuid_output.stdout) }}:{{ luks_device.name }} root=/dev/mapper/{{ vg_name }}-root resume=/dev/mapper/{{ vg_name }}-swap rd.luks.options=discard i8042.reset i8042.nomux i8042.nopnp i8042.noloop amdgpu.dcdebugmask=0x410 amdgpu.sg_display=0 acpi.ec_no_wakeup=1"'
       become: yes
       notify: Regenerate GRUB config
+
+    # 4b. Configurar modprobe para AMD GPU (workarounds para Radeon 860M)
+    - name: Configure AMDGPU modprobe options
+      copy:
+        dest: /etc/modprobe.d/amdgpu.conf
+        content: |
+          # Workarounds para AMD Radeon 860M (Krackan/Strix)
+          # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
+          options amdgpu dcdebugmask=0x410
+          options amdgpu sg_display=0
+        owner: root
+        group: root
+        mode: "0644"
+      become: yes
+
+    # 4c. Configurar variable de entorno para KWin (evitar flickering)
+    - name: Configure KWin triple buffering workaround
+      copy:
+        dest: /etc/profile.d/kwin-amdgpu-workaround.sh
+        content: |
+          # Workaround para flickering en KDE con AMD Radeon 860M
+          # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
+          export KWIN_DRM_DISABLE_TRIPLE_BUFFERING=1
+        owner: root
+        group: root
+        mode: "0644"
+      become: yes
 
     # 5. Configurar charging profile (opcional)
     - name: Configure Tuxedo charging profile
@@ -81,7 +112,14 @@
       loop:
         - tuxedo_keyboard
         - tuxedo_io
+        - amdgpu
       become: yes
+
+    # 6b. Regenerar initramfs para aplicar cambios de modprobe
+    - name: Regenerate initramfs
+      ansible.builtin.command: mkinitcpio -P
+      become: yes
+      changed_when: true
 
   handlers:
     - name: Regenerate GRUB config
