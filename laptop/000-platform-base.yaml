@@ -25,8 +25,8 @@
         number: 2
         state: present
         part_start: "{{ boot_partition_size }}"
-        part_end: "{{ boot_partition_size | human_to_bytes | int + efi_partition_size | human_to_bytes | int }} bytes"
-        flags: [{ name: "esp", value: "on" }]
+        part_end: "{{ efi_partition_end }}"
+        flags: [esp]
 
     - name: Format EFI partition as vfat
       filesystem:
@@ -38,7 +38,7 @@
         device: "{{ disk_name }}"
         number: 3
         state: present
-        part_start: "{{ boot_partition_size | human_to_bytes | int + efi_partition_size | human_to_bytes | int }} bytes"
+        part_start: "{{ luks_partition_start }}"
         part_end: "100%"
 
     - name: Create and open the LUKS container
@@ -97,7 +97,7 @@
       ignore_errors: yes
 
     - name: Swap on
-      command: "swapon -e /dev/mapper/{{ vg_name }}-swap"
+      command: "swapon /dev/mapper/{{ vg_name }}-swap"
       when: swap_on.stdout_lines|length == 0
 
     - name: Install the base packages

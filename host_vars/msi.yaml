@@ -9,6 +9,8 @@ luks_partition: "/dev/nvme0n1p3"      # Encrypted container
 # Tamaños de particiones
 boot_partition_size: "1GiB"
 efi_partition_size: "512MiB"
+efi_partition_end: "1536MiB"
+luks_partition_start: "1537MiB"
 
 luks_device:
   device: "/dev/nvme0n1p3"
