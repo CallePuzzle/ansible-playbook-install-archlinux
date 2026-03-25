@@ -105,3 +105,58 @@
 
     - name: Generate fstab
       command: "genfstab -U /mnt >> /mnt/etc/fstab"
+
+    - name: Verify fstab was generated
+      stat:
+        path: /mnt/etc/fstab
+      register: fstab_stat
+
+    - name: Fail if fstab was not generated
+      fail:
+        msg: |
+          ERROR: /mnt/etc/fstab was not generated!
+
+          Please run the following command manually:
+            genfstab -U /mnt >> /mnt/etc/fstab
+
+          Then verify the file contains entries for:
+            - Boot partition ({{ boot_partition }})
+            - Root LVM (/dev/mapper/{{ vg_name }}-root)
+            - Swap LVM (/dev/mapper/{{ vg_name }}-swap)
+      when: not fstab_stat.stat.exists
+
+    - name: Verify fstab contains required entries
+      shell: "grep -E '{{ item.pattern }}' /mnt/etc/fstab"
+      register: fstab_check
+      ignore_errors: yes
+      changed_when: false
+      loop:
+        - { name: "boot", pattern: "{{ boot_partition | basename }}", required: true }
+        - { name: "root", pattern: "/dev/mapper/{{ vg_name }}-root", required: true }
+        - { name: "swap", pattern: "/dev/mapper/{{ vg_name }}-swap", required: true }
+
+    - name: Warn user if fstab entries are missing
+      debug:
+        msg: |
+          WARNING: fstab entry for {{ item.item.name }} was not found!
+
+          The generated fstab may be incomplete. Please check /mnt/etc/fstab manually
+          and add the missing entry if needed.
+
+          To regenerate fstab manually, run:
+            genfstab -U /mnt >> /mnt/etc/fstab
+
+          Expected entry for {{ item.item.name }}: {{ item.item.pattern }}
+      when: item.rc != 0
+      loop: "{{ fstab_check.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: Display fstab content for verification
+      command: "cat /mnt/etc/fstab"
+      register: fstab_content
+      changed_when: false
+
+    - name: Show fstab content
+      debug:
+        var: fstab_content.stdout_lines
