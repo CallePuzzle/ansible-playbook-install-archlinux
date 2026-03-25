@@ -106,4 +106,4 @@
       command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd'
 
     - name: Set root password
-      command: "arch-chroot /mnt bash -c 'echo root:{{ root_password_hash }} | chpasswd -e'"
+      command: "arch-chroot /mnt bash -c 'echo root:{{ root_password_hash | trim }} | chpasswd -e'"

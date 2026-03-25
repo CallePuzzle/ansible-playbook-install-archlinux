@@ -16,7 +16,6 @@ luks_device:
   device: "/dev/nvme0n1p3"
   name: "cryptlvm"
   type: "luks2"
-  uuid: "efdb1633-18f4-492a-81cd-578dd3bc7c9c"
 
 luks_device_passphrase: !vault |
   $ANSIBLE_VAULT;1.1;AES256
