@@ -105,6 +105,19 @@
     - name: Install basic packages
       command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd'
 
+    - name: Configure iwd for auto network configuration
+      copy:
+        dest: /mnt/etc/iwd/main.conf
+        content: |
+          [General]
+          EnableNetworkConfiguration=true
+
+    - name: Configure SSH to allow root login
+      lineinfile:
+        path: /mnt/etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin yes"
+
     - name: Remind to set root password manually
       ansible.builtin.debug:
         msg: |
