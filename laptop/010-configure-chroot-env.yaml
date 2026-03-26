@@ -105,5 +105,15 @@
     - name: Install basic packages
       command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd'
 
-    - name: Set root password
-      command: "arch-chroot /mnt bash -c 'echo root:{{ root_password_hash | trim }} | chpasswd -e'"
+    - name: Remind to set root password manually
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  IMPORTANTE: No se ha establecido la contraseña de root.
+
+          Después de completar esta instalación, ejecuta manualmente:
+
+            arch-chroot /mnt passwd root
+
+          O si ya has salido del chroot:
+
+            passwd
