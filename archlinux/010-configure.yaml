@@ -108,6 +108,15 @@
         no_extra_spaces: true
         backup: true
 
+    - name: kxkbrc ResetOldOptions
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kxkbrc"
+        section: Layout
+        option: ResetOldOptions
+        value: "true"
+        no_extra_spaces: true
+        backup: true
+
     - name: kwinrc Desktops
       community.general.ini_file:
         path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
