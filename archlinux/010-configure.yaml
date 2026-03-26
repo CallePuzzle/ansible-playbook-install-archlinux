@@ -49,6 +49,24 @@
       become: yes
       become_method: sudo
 
+    - name: Configure bluetooth main.conf
+      ansible.builtin.copy:
+        dest: /etc/bluetooth/main.conf
+        content: |
+          [General]
+          Name = {{ inventory_hostname }}
+          Class = 0x000100
+          DiscoverableTimeout = 0
+          AlwaysPairable = false
+          PairableTimeout = 0
+          AutoEnable=true
+          Privacy = device
+          JustWorksRepairing = always
+          Experimental = true
+      become: yes
+      become_method: sudo
+      notify: restart bluetooth
+
     - name: Create autostart directory
       file:
         path: "/home/{{ ansible_ssh_user }}/.config/autostart"
@@ -63,10 +81,12 @@
           [Desktop Entry]
           Type=Application
           Name=Solaar
-          Exec=solaar -w hide-only
+          Exec=/bin/sh -c 'sleep 5 && solaar -w hide-only'
           Icon=solaar
           Comment=Logitech device manager
           X-GNOME-Autostart-enabled=true
+          X-KDE-autostart-after=panel
+          X-KDE-autostart-phase=2
 
     - name: Configure nextcloud-client autostart
       copy:
@@ -83,6 +103,17 @@
           StartupNotify=false
           X-GNOME-Autostart-enabled=true
           X-GNOME-Autostart-Delay=10
+
+    - name: Fix permissions on .desktop files in autostart
+      ansible.builtin.file:
+        path: "/home/{{ ansible_ssh_user }}/.config/autostart/{{ item }}"
+        mode: '0644'
+      loop:
+        - solaar.desktop
+        - nextcloud.desktop
+        - Nextcloud.desktop
+        - tuxedo-control-center-tray.desktop
+      ignore_errors: yes
 
     - name: Configure git
       copy:
@@ -371,3 +402,11 @@
                   echo -e "$vi_mode_color $vi_mode_symbol \x1b[0m "
               end
           end
+
+  handlers:
+    - name: restart bluetooth
+      service:
+        name: bluetooth
+        state: restarted
+      become: yes
+      become_method: sudo

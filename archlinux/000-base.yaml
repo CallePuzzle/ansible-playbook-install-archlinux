@@ -4,7 +4,6 @@
   vars:
     ansible_ssh_user: root
   tasks:
-
     - name: Create user
       user:
         name: "{{ user_name }}"
@@ -50,6 +49,8 @@
           - plasma
           - linux-headers
           - dkms
+          - wireless-regdb
+          - xcursor-vanilla-dmz
 
     - name: Enable X
       service:
@@ -58,6 +59,31 @@
       loop:
         - sddm
         - NetworkManager
+
+    - name: Enable systemd-resolved
+      service:
+        name: systemd-resolved
+        enabled: yes
+        state: started
+
+    - name: Enable ModemManager
+      service:
+        name: ModemManager
+        enabled: yes
+        state: started
+      when: false # Yo creo que por defecto no voy a querer usar esto
+
+    - name: Configure systemd-resolved
+      ansible.builtin.copy:
+        dest: /etc/systemd/resolved.conf
+        content: |
+          [Resolve]
+          DNS=1.1.1.1 1.0.0.1
+          FallbackDNS=8.8.8.8 8.8.4.4
+          DNSOverTLS=yes
+          DNSSEC=yes
+          MulticastDNS=yes
+      notify: restart systemd-resolved
 
     - name: Install necessary packages
       pacman:
@@ -88,3 +114,9 @@
         name: chronyd
         state: started
         enabled: true
+
+  handlers:
+    - name: restart systemd-resolved
+      service:
+        name: systemd-resolved
+        state: restarted
