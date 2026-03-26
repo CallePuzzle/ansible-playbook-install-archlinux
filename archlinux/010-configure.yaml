@@ -2,63 +2,93 @@
 - name: Installation base
   hosts: all
   tasks:
-
     - name: Install necessary packages
       pacman:
         name:
-          - leafpad
-          - terminator
+          - featherpad
           - vlc
           - the_silver_searcher
           - nextcloud-client
           - wget
           - git
+          - less
           - rsync
-          - emacs
           - btop
-          - firefox
           - audacity
           - obsidian
           - noto-fonts-emoji # tasks' icons
           - telegram-desktop
           - kcalc
           - sshpass
+          - dolphin
+          - spectacle
+          - okular
+          - gwenview
+          - unzip
+          - ark
+          - bluedevil
+          - bluez
+          - bluez-libs
+          - bluez-utils
+          - cups
+          - libcups
+          - print-manager
+          - nfs-utils
+          - python-virtualenv
+          - fish
+          - ghostty
+          - solaar
       become: yes
       become_method: sudo
+
+    - name: Enable bluetooth service
+      ansible.builtin.systemd:
+        name: bluetooth
+        enabled: yes
+        state: started
+      become: yes
+      become_method: sudo
+
+    - name: Create autostart directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/autostart"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure solaar autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/solaar.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Solaar
+          Exec=solaar -w hide-only
+          Icon=solaar
+          Comment=Logitech device manager
+          X-GNOME-Autostart-enabled=true
+
+    - name: Configure nextcloud-client autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/nextcloud.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Nextcloud
+          GenericName=File Synchronizer
+          Exec=/usr/bin/nextcloud --background
+          Icon=Nextcloud
+          Categories=Network
+          StartupNotify=false
+          X-GNOME-Autostart-enabled=true
+          X-GNOME-Autostart-Delay=10
 
     - name: Configure git
       copy:
         src: ../files/git.config
         dest: "/home/{{ ansible_ssh_user }}/.gitconfig"
         owner: "{{ ansible_ssh_user }}"
-
-    - name: Create config terminator directory
-      file:
-        path: "/home/{{ ansible_ssh_user }}/.config/terminator"
-        state: directory
-        owner: "{{ ansible_ssh_user }}"
-
-    - name: Configure terminator
-      copy:
-        src: ../files/terminator.config
-        dest: "/home/{{ ansible_ssh_user }}/.config/terminator/config"
-        owner: "{{ ansible_ssh_user }}"
-
-    - name: Install doom emacs
-      ansible.builtin.git:
-        repo: https://github.com/doomemacs/doomemacs
-        dest: /home/{{ ansible_ssh_user }}/.emacs.d
-        depth: 1
-
-    - name: Clone doom emacs configuration
-      ansible.builtin.git:
-        repo: https://github.com/jilgue/doom-emacs-config.git
-        dest: /home/{{ ansible_ssh_user }}/.doom.d
-
-    - name: Install doom emacs
-      command: /home/{{ ansible_ssh_user }}/.emacs.d/bin/doom install --force
-      when: false
-      # TODO idempotent
 
     - name: kxkbrc LayoutList
       community.general.ini_file:
@@ -78,6 +108,15 @@
         no_extra_spaces: true
         backup: true
 
+    - name: kxkbrc ResetOldOptions
+      community.general.ini_file:
+        path: "/home/{{ ansible_ssh_user }}/.config/kxkbrc"
+        section: Layout
+        option: ResetOldOptions
+        value: "true"
+        no_extra_spaces: true
+        backup: true
+
     - name: kwinrc Desktops
       community.general.ini_file:
         path: "/home/{{ ansible_ssh_user }}/.config/kwinrc"
@@ -87,14 +126,14 @@
         no_extra_spaces: true
         backup: true
       loop:
-        - {option: "Id_1", value: "7f91f6e3-2733-4938-8721-957df2d769ae"}
-        - {option: "Id_2", value: "be9529d6-f166-4890-9284-073fc1e17213"}
-        - {option: "Id_3", value: "fdeb20f3-b204-498d-8552-7e3fa4ae4cc8"}
-        - {option: "Name_1", value: "main"}
-        - {option: "Name_2", value: "code"}
-        - {option: "Name_3", value: "chat"}
-        - {option: "Rows", value: "1"}
-        - {option: "Number", value: "3"}
+        - { option: "Id_1", value: "7f91f6e3-2733-4938-8721-957df2d769ae" }
+        - { option: "Id_2", value: "be9529d6-f166-4890-9284-073fc1e17213" }
+        - { option: "Id_3", value: "fdeb20f3-b204-498d-8552-7e3fa4ae4cc8" }
+        - { option: "Name_1", value: "main" }
+        - { option: "Name_2", value: "code" }
+        - { option: "Name_3", value: "chat" }
+        - { option: "Rows", value: "1" }
+        - { option: "Number", value: "3" }
 
     - name: kwinrc Windows
       community.general.ini_file:
@@ -123,21 +162,66 @@
         no_extra_spaces: true
         backup: true
       loop:
-        - {option: "Switch One Desktop to the Left", value: "Ctrl+Alt+Left,Meta+Ctrl+Left,Cambiar al escritorio de la izquierda"}
-        - {option: "Switch One Desktop to the Right", value: "Ctrl+Alt+Right,Meta+Ctrl+Right,Cambiar al escritorio de la derecha"}
-        - {option: "Window One Desktop to the Left", value: "Ctrl+Alt+Shift+Left,none,Ventana al escritorio de la izquierda"}
-        - {option: "Window One Desktop to the Right", value: "Ctrl+Alt+Shift+Right,none,Ventana al escritorio de la derecha"}
-        - {option: "Window No Border", value: "Meta+Backspace,none,Ocultar el borde de la ventana"}
-        - {option: "Window Maximize", value: "Meta+PgUp\tMeta+Up,Meta+PgUp,Maximize Window"}
-        - {option: "Window Minimize", value: "Meta+PgDown\tMeta+Down,Meta+PgDown,Minimize Window"}
-        - {option: "Window Quick Tile Bottom Left", value: "Meta+Ctrl+Left,none,Situar la ventana en mosaico en la parte inferior izquierda"}
-        - {option: "Window Quick Tile Bottom Right", value: "Meta+Ctrl+Right,none,Situar la ventana en mosaico en la parte inferior derecha"}
-        - {option: "Window Quick Tile Left", value: "Meta+Left,Meta+Left,Situar la ventana en mosaico a la izquierda"}
-        - {option: "Window Quick Tile Right", value: "Meta+Right,Meta+Right,Situar la ventana en mosaico a la derecha"}
-        - {option: "Window Quick Tile Top Left", value: "Meta+Alt+Left,none,Situar la ventana en mosaico en la parte superior izquierda"}
-        - {option: "Window Quick Tile Top Right", value: "Meta+Alt+Right,none,Situar la ventana en mosaico en la parte superior derecha"}
-        - {option: "Switch Window Left", value: "none,none,Switch to Window to the Left"}
-        - {option: "Switch Window Right", value: "none,none,Switch to Window to the Right"}
+        - {
+            option: "Switch One Desktop to the Left",
+            value: "Ctrl+Alt+Left,Meta+Ctrl+Left,Cambiar al escritorio de la izquierda",
+          }
+        - {
+            option: "Switch One Desktop to the Right",
+            value: "Ctrl+Alt+Right,Meta+Ctrl+Right,Cambiar al escritorio de la derecha",
+          }
+        - {
+            option: "Window One Desktop to the Left",
+            value: "Ctrl+Alt+Shift+Left,none,Ventana al escritorio de la izquierda",
+          }
+        - {
+            option: "Window One Desktop to the Right",
+            value: "Ctrl+Alt+Shift+Right,none,Ventana al escritorio de la derecha",
+          }
+        - {
+            option: "Window No Border",
+            value: "Meta+Backspace,none,Ocultar el borde de la ventana",
+          }
+        - {
+            option: "Window Maximize",
+            value: "Meta+PgUp\tMeta+Up,Meta+PgUp,Maximize Window",
+          }
+        - {
+            option: "Window Minimize",
+            value: "Meta+PgDown\tMeta+Down,Meta+PgDown,Minimize Window",
+          }
+        - {
+            option: "Window Quick Tile Bottom Left",
+            value: "Meta+Ctrl+Left,none,Situar la ventana en mosaico en la parte inferior izquierda",
+          }
+        - {
+            option: "Window Quick Tile Bottom Right",
+            value: "Meta+Ctrl+Right,none,Situar la ventana en mosaico en la parte inferior derecha",
+          }
+        - {
+            option: "Window Quick Tile Left",
+            value: "Meta+Left,Meta+Left,Situar la ventana en mosaico a la izquierda",
+          }
+        - {
+            option: "Window Quick Tile Right",
+            value: "Meta+Right,Meta+Right,Situar la ventana en mosaico a la derecha",
+          }
+        - {
+            option: "Window Quick Tile Top Left",
+            value: "Meta+Alt+Left,none,Situar la ventana en mosaico en la parte superior izquierda",
+          }
+        - {
+            option: "Window Quick Tile Top Right",
+            value: "Meta+Alt+Right,none,Situar la ventana en mosaico en la parte superior derecha",
+          }
+        - {
+            option: "Switch Window Left",
+            value: "none,none,Switch to Window to the Left",
+          }
+        - {
+            option: "Switch Window Right",
+            value: "none,none,Switch to Window to the Right",
+          }
 
     - name: Create config ssh directory
       file:
@@ -145,20 +229,145 @@
         state: directory
         owner: "{{ ansible_ssh_user }}"
 
-    - name: Configure ssh
+    - name: Configure ssh keys
       copy:
         src: "../files/{{ item }}"
         dest: "/home/{{ ansible_ssh_user }}/.ssh/{{ item }}"
         owner: "{{ ansible_ssh_user }}"
         mode: 0600
       loop:
-        - id_rsa
-        - id_rsa.pub
+        - id_ed25519
+        - id_ed25519.pub
       tags:
         - ssh
 
-    - name: Configure bashrc
-      copy:
-        src: ../files/bashrc
-        dest: "/home/{{ ansible_ssh_user }}/.bashrc"
+    - name: Configure ssh SetEnv TERM
+      blockinfile:
+        path: "/home/{{ ansible_ssh_user }}/.ssh/config"
+        block: |
+          Host *
+            SetEnv TERM=xterm-256color
+        create: yes
         owner: "{{ ansible_ssh_user }}"
+        mode: 0600
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+
+    - name: Create ghostty config directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/ghostty"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure ghostty
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/ghostty/config"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          copy-on-select = clipboard
+          app-notifications = no-clipboard-copy
+          keybind = alt+up=goto_split:up
+          keybind = alt+down=goto_split:down
+          keybind = alt+left=goto_split:left
+          keybind = alt+right=goto_split:right
+          keybind = control+shift+z=toggle_split_zoom
+
+    - name: Set fish as default shell
+      user:
+        name: "{{ ansible_ssh_user }}"
+        shell: /usr/bin/fish
+      become: yes
+      become_method: sudo
+
+    - name: Create fish config directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/fish"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure fish_plugins
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/fish/fish_plugins"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          jorgebucaran/fisher
+          edc/bass
+          jorgebucaran/hydro
+
+    - name: Install fisher
+      shell: |
+        curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher
+      args:
+        executable: /usr/bin/fish
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      register: fisher_install
+      changed_when: "'fisher install version' in fisher_install.stdout"
+
+    - name: Install fish plugins
+      shell: fisher update
+      args:
+        executable: /usr/bin/fish
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+
+    - name: Configure config.fish
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/fish/config.fish"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          if status is-interactive
+              # Commands to run in interactive sessions can go here
+              if test -n "$DESKTOP_SESSION"
+                  set -x SSH_ASKPASS /usr/bin/ksshaskpass
+                  eval (ssh-agent -c)
+                  ssh-add < /dev/null
+              end
+
+              set -Ua fish_user_paths $HOME/.local/bin
+
+          end
+
+          # ASDF configuration code
+          if test -z $ASDF_DATA_DIR
+              set _asdf_shims "$HOME/.asdf/shims"
+          else
+              set _asdf_shims "$ASDF_DATA_DIR/shims"
+          end
+
+          # Do not use fish_add_path (added in Fish 3.2) because it
+          # potentially changes the order of items in PATH
+          if not contains $_asdf_shims $PATH
+              set -gx --prepend PATH $_asdf_shims
+          end
+          set --erase _asdf_shims
+
+          alias zed="zeditor"
+
+          set -x PATH $PATH $HOME/go/bin
+
+    - name: Configure fish_mode_prompt function
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/fish/functions/fish_mode_prompt.fish"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          function fish_mode_prompt
+              if test "$fish_key_bindings" != fish_default_key_bindings
+                  set --local vi_mode_color
+                  set --local vi_mode_symbol
+                  switch $fish_bind_mode
+                      case default
+                          set vi_mode_color (set_color $fish_color_selection)
+                          set vi_mode_symbol N
+                      case insert
+                          set vi_mode_color (set_color $fish_color_selection)
+                          set vi_mode_symbol I
+                      case replace replace_one
+                          set vi_mode_color (set_color $fish_color_match)
+                          set vi_mode_symbol R
+                      case visual
+                          set vi_mode_color (set_color $fish_color_match)
+                          set vi_mode_symbol V
+                  end
+                  echo -e "$vi_mode_color $vi_mode_symbol \x1b[0m "
+              end
+          end

@@ -1,0 +1,83 @@
+---
+# Configuración de Molecule para testing de playbooks de Arch Linux
+# Usa Podman como driver para contenedores rootless
+
+driver:
+  name: podman
+  options:
+    # Habilitar systemd en el contenedor
+    systemd: true
+    # Privilegios necesarios para systemd
+    privileged: true
+
+platforms:
+  - name: archlinux-test
+    # Usar Dockerfile local
+    image: localhost/archlinux-ansible:test
+    # Construir desde Dockerfile
+    build:
+      dockerfile: Dockerfile
+      context: .
+    # Configuración específica para systemd
+    command: /usr/lib/systemd/systemd
+    env:
+      container: podman
+    # Volumes necesarios para systemd
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /tmp:/tmp
+      - /run:/run
+    # Capacidades necesarias
+    capabilities:
+      - SYS_ADMIN
+      - NET_ADMIN
+    # Configuración de red
+    network: bridge
+    # Puerto SSH expuesto
+    exposed_ports:
+      - "22/tcp"
+
+provisioner:
+  name: ansible
+  # Inventario de Ansible para el contenedor
+  inventory:
+    hosts:
+      all:
+        hosts:
+          archlinux-test:
+            ansible_user: ansible
+            ansible_ssh_user: ansible
+            ansible_become: true
+            ansible_become_method: sudo
+            ansible_python_interpreter: /usr/bin/python3
+            # Variables de host necesarias para los playbooks
+            user_name: ansible
+            ansible_ssh_user: ansible
+  # Opciones del provisioner
+  options:
+    vvv: false
+  # Variables de configuración
+  config_options:
+    defaults:
+      # Aceptar host key automáticamente
+      host_key_checking: false
+      # Timeout de conexión
+      timeout: 30
+      # Interpretes de python
+      interpreter_python: /usr/bin/python3
+
+verifier:
+  # Usar Ansible como verificador (por defecto en Molecule 3+)
+  name: ansible
+
+# Secuencia de testing
+scenario:
+  name: default
+  test_sequence:
+    - destroy
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - destroy

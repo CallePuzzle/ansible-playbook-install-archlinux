@@ -1,0 +1,127 @@
+---
+- name: Configure Tuxedo specific hardware and drivers
+  hosts: tuxedo
+  vars:
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
+  tasks:
+    # 1. Instalar drivers Tuxedo desde AUR
+    - name: Install Tuxedo drivers from AUR
+      kewlfft.aur.aur:
+        name: "{{ item }}"
+        state: present
+        use: yay
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      loop:
+        - tuxedo-drivers-dkms
+        - tuxedo-control-center-bin
+        - tuxedo-yt6801-dkms-git
+
+    # 2. Habilitar servicios Tuxedo
+    - name: Enable Tuxedo Control Center service
+      ansible.builtin.systemd:
+        name: tccd.service
+        enabled: yes
+        state: started
+      become: yes
+
+    # 3. Crear autostart para Tuxedo Control Center tray
+    - name: Create autostart directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/autostart"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure Tuxedo Control Center tray autostart
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/autostart/tuxedo-control-center-tray.desktop"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Tuxedo Control Center
+          Exec=tuxedo-control-center --tray
+          Icon=tuxedo-control-center
+          Comment=Tuxedo Control Center Tray
+          X-GNOME-Autostart-enabled=true
+
+    # 4. Configurar kernel parameters específicos de Tuxedo
+    # Necesarios para:
+    # - Teclado después de suspend (i8042.*)
+    # - AMD Radeon 860M: deshabilitar PSR y scatter/gather para evitar flickering
+    # - Mejorar batería durante sleep (acpi.ec_no_wakeup)
+    # Ref: https://wiki.archlinux.org/title/TUXEDO_InfinityBook_14_Gen10
+    # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
+    - name: Get LUKS device UUID
+      ansible.builtin.command: "cryptsetup luksUUID {{ luks_partition }}"
+      register: luks_uuid_output
+      changed_when: false
+      become: yes
+
+    - name: Configure Tuxedo kernel parameters
+      lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX="'
+        line: 'GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ luks_device.uuid | default(luks_uuid_output.stdout) }}:{{ luks_device.name }} root=/dev/mapper/{{ vg_name }}-root resume=/dev/mapper/{{ vg_name }}-swap rd.luks.options=discard i8042.reset i8042.nomux i8042.nopnp i8042.noloop amdgpu.dcdebugmask=0x410 amdgpu.sg_display=0 acpi.ec_no_wakeup=1"'
+      become: yes
+      notify: Regenerate GRUB config
+
+    # 4b. Configurar modprobe para AMD GPU (workarounds para Radeon 860M)
+    - name: Configure AMDGPU modprobe options
+      copy:
+        dest: /etc/modprobe.d/amdgpu.conf
+        content: |
+          # Workarounds para AMD Radeon 860M (Krackan/Strix)
+          # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
+          options amdgpu dcdebugmask=0x410
+          options amdgpu sg_display=0
+        owner: root
+        group: root
+        mode: "0644"
+      become: yes
+
+    # 4c. Configurar variable de entorno para KWin (evitar flickering)
+    - name: Configure KWin triple buffering workaround
+      copy:
+        dest: /etc/profile.d/kwin-amdgpu-workaround.sh
+        content: |
+          # Workaround para flickering en KDE con AMD Radeon 860M
+          # Ref: https://bbs.archlinux.org/viewtopic.php?pid=2241862#p2241862
+          export KWIN_DRM_DISABLE_TRIPLE_BUFFERING=1
+        owner: root
+        group: root
+        mode: "0644"
+      become: yes
+
+    # 5. Configurar charging profile (opcional)
+    - name: Configure Tuxedo charging profile
+      ansible.builtin.command: |
+        echo "high_capacity" > /sys/bus/platform/drivers/tuxedo_keyboard/tuxedo_keyboard/charging_profile/charging_profile
+      become: yes
+      ignore_errors: yes
+
+    # 6. Añadir módulos del kernel a cargar
+    - name: Configure kernel modules for Tuxedo
+      lineinfile:
+        path: /etc/modules-load.d/tuxedo.conf
+        create: yes
+        line: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - tuxedo_keyboard
+        - tuxedo_io
+        - amdgpu
+      become: yes
+
+    # 6b. Regenerar initramfs para aplicar cambios de modprobe
+    - name: Regenerate initramfs
+      ansible.builtin.command: mkinitcpio -P
+      become: yes
+      changed_when: true
+
+  handlers:
+    - name: Regenerate GRUB config
+      ansible.builtin.command: grub-mkconfig -o /boot/grub/grub.cfg
+      become: yes

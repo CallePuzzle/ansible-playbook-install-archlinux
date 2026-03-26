@@ -1,0 +1,24 @@
+---
+# Playbook para destruir el contenedor de testing
+# Este playbook se ejecuta en el host para eliminar el contenedor
+
+- name: Destroy molecule test container
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Stop and remove container
+      containers.podman.podman_container:
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      ignore_errors: true
+
+    - name: Remove molecule inventory
+      ansible.builtin.file:
+        path: "{{ molecule_ephemeral_directory }}/inventory/molecule_inventory.yml"
+        state: absent
+      vars:
+        molecule_ephemeral_directory: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') | default('./.molecule', true) }}"
+      ignore_errors: true

@@ -3,9 +3,10 @@
   hosts: all
   vars:
     ansible_ssh_user: root
+    # VG name configurable por host_vars, default "Vol" para compatibilidad
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
   tasks:
-
-    - name: Create partition 1
+    - name: Create boot partition (ext4)
       parted:
         device: "{{ disk_name }}"
         number: 1
@@ -13,37 +14,49 @@
         part_start: "0%"
         part_end: "{{ boot_partition_size }}"
 
-    - name: Format boot partition
+    - name: Format boot partition as ext4
       filesystem:
-        fstype: "vfat"
+        fstype: "ext4"
         dev: "{{ boot_partition }}"
 
-    - name: Create partition 2
+    - name: Create EFI partition (vfat)
       parted:
         device: "{{ disk_name }}"
         number: 2
         state: present
         part_start: "{{ boot_partition_size }}"
+        part_end: "{{ efi_partition_end }}"
+        flags: [esp]
+
+    - name: Format EFI partition as vfat
+      filesystem:
+        fstype: "vfat"
+        dev: "{{ efi_partition }}"
+
+    - name: Create LUKS partition
+      parted:
+        device: "{{ disk_name }}"
+        number: 3
+        state: present
+        part_start: "{{ luks_partition_start }}"
         part_end: "100%"
 
-    # using ansible 2.10
-    # https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/crypto/luks_device.py
     - name: Create and open the LUKS container
-      luks_device:
-        device: "{{ luks_device.device }}"
+      community.crypto.luks_device:
+        device: "{{ luks_partition }}"
         state: "opened"
         name: "{{ luks_device.name }}"
         passphrase: "{{ luks_device_passphrase }}"
         type: "{{ luks_device.type }}"
 
-    - name: Create VolGroup
+    - name: Create Volume Group
       lvg:
-        vg: Vol
+        vg: "{{ vg_name }}"
         pvs: /dev/mapper/{{ luks_device.name }}
 
-    - name: Create local storage
+    - name: Create logical volumes
       lvol:
-        vg: Vol
+        vg: "{{ vg_name }}"
         lv: "{{ item.name }}"
         size: "{{ item.size }}"
         shrink: false
@@ -53,12 +66,12 @@
     - name: Format lvm partitions
       filesystem:
         fstype: "{{ item.type }}"
-        dev: "/dev/mapper/Vol-{{ item.name }}"
+        dev: "/dev/mapper/{{ vg_name }}-{{ item.name }}"
       loop: "{{ lvm_partitions }}"
 
     - name: Mount lvm partitions
       mount:
-        src: "/dev/mapper/Vol-{{ item.name }}"
+        src: "/dev/mapper/{{ vg_name }}-{{ item.name }}"
         path: "/mnt{{ item.path }}"
         fstype: "{{ item.type }}"
         state: mounted
@@ -69,13 +82,13 @@
       file:
         path: /mnt/boot/
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Mount boot partition
       mount:
         src: "{{ boot_partition }}"
         path: "/mnt/boot"
-        fstype: "vfat"
+        fstype: "ext4"
         state: mounted
 
     - name: Check if swap is on
@@ -84,11 +97,66 @@
       ignore_errors: yes
 
     - name: Swap on
-      command: "swapon -e /dev/mapper/Vol-swap"
+      command: "swapon /dev/mapper/{{ vg_name }}-swap"
       when: swap_on.stdout_lines|length == 0
 
     - name: Install the base packages
-      command: "pacstrap /mnt base base-devel linux linux-firmware"
+      command: "pacstrap -K /mnt base base-devel linux linux-firmware"
 
     - name: Generate fstab
       command: "genfstab -U /mnt >> /mnt/etc/fstab"
+
+    - name: Verify fstab was generated
+      stat:
+        path: /mnt/etc/fstab
+      register: fstab_stat
+
+    - name: Fail if fstab was not generated
+      fail:
+        msg: |
+          ERROR: /mnt/etc/fstab was not generated!
+
+          Please run the following command manually:
+            genfstab -U /mnt >> /mnt/etc/fstab
+
+          Then verify the file contains entries for:
+            - Boot partition ({{ boot_partition }})
+            - Root LVM (/dev/mapper/{{ vg_name }}-root)
+            - Swap LVM (/dev/mapper/{{ vg_name }}-swap)
+      when: not fstab_stat.stat.exists
+
+    - name: Verify fstab contains required entries
+      shell: "grep -E '{{ item.pattern }}' /mnt/etc/fstab"
+      register: fstab_check
+      ignore_errors: yes
+      changed_when: false
+      loop:
+        - { name: "boot", pattern: "{{ boot_partition | basename }}", required: true }
+        - { name: "root", pattern: "/dev/mapper/{{ vg_name }}-root", required: true }
+        - { name: "swap", pattern: "/dev/mapper/{{ vg_name }}-swap", required: true }
+
+    - name: Warn user if fstab entries are missing
+      debug:
+        msg: |
+          WARNING: fstab entry for {{ item.item.name }} was not found!
+
+          The generated fstab may be incomplete. Please check /mnt/etc/fstab manually
+          and add the missing entry if needed.
+
+          To regenerate fstab manually, run:
+            genfstab -U /mnt >> /mnt/etc/fstab
+
+          Expected entry for {{ item.item.name }}: {{ item.item.pattern }}
+      when: item.rc != 0
+      loop: "{{ fstab_check.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: Display fstab content for verification
+      command: "cat /mnt/etc/fstab"
+      register: fstab_content
+      changed_when: false
+
+    - name: Show fstab content
+      debug:
+        var: fstab_content.stdout_lines

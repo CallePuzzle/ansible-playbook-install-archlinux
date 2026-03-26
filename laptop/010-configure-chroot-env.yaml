@@ -3,8 +3,10 @@
   hosts: all
   vars:
     ansible_ssh_user: root
+    cpu_microcode_package: "{{ 'intel-ucode' if cpu_vendor == 'intel' else 'amd-ucode' }}"
+    # VG name configurable por host_vars, default "Vol"
+    vg_name: "{{ lvm_vg_name | default('Vol') }}"
   tasks:
-
     - name: Link localtime
       file:
         src: /mnt/usr/share/zoneinfo/Europe/Madrid
@@ -13,7 +15,6 @@
 
     - name: Configure localtime
       command: arch-chroot /mnt bash -c 'hwclock --systohc'
-      when: false
 
     - name: Configure locale gen
       lineinfile:
@@ -44,43 +45,88 @@
         path: /mnt/etc/hostname
         create: true
         line: "{{ inventory_hostname }}"
-        regexp: "^{{ inventory_hostname }}"
+        regexp: "^{{ inventory_hostname }}$"
 
-    - name: Install lvm2 xfsprogs
-      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs'
+    - name: Install required packages
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed lvm2 xfsprogs linux-headers dkms'
 
-    - name: Configure mkinitcpio
+    - name: Configure mkinitcpio for GRUB + LUKS
       lineinfile:
         path: /mnt/etc/mkinitcpio.conf
-        line: 'HOOKS=(base udev autodetect modconf block encrypt lvm2 resume filesystems keyboard fsck)'
+        line: "HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 resume filesystems fsck)"
         regexp: '^HOOKS=\('
 
     - name: Execute mkinitcpio
       command: arch-chroot /mnt bash -c 'mkinitcpio -p linux'
 
     - name: Install microcode
-      command: arch-chroot /mnt bash -c 'pacman -S  --noconfirm --needed intel-ucode'
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed {{ cpu_microcode_package }}'
 
-    - name: Install grub
-      command: arch-chroot /mnt bash -c 'pacman -S  --noconfirm --needed grub efibootmgr'
+    # GRUB Installation
+    - name: Install GRUB and dependencies
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed grub efibootmgr'
 
-    - name: Grub install
-      command: arch-chroot /mnt bash -c 'grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB'
+    - name: Ensure EFI directory exists
+      file:
+        path: /mnt/boot/efi
+        state: directory
+        mode: "0755"
 
-    - name: Configure GRUB_CMDLINE_LINUX
+    - name: Mount EFI partition
+      mount:
+        src: "{{ efi_partition }}"
+        path: "/mnt/boot/efi"
+        fstype: "vfat"
+        state: mounted
+
+    - name: Get LUKS device UUID
+      ansible.builtin.command: "cryptsetup luksUUID {{ luks_partition }}"
+      register: luks_uuid_output
+      changed_when: false
+
+    - name: Configure GRUB for LUKS
+      copy:
+        dest: /mnt/etc/default/grub
+        content: |
+          GRUB_DEFAULT=0
+          GRUB_TIMEOUT=5
+          GRUB_DISTRIBUTOR="Arch"
+          GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"
+          GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ luks_device.uuid | default(luks_uuid_output.stdout) }}:{{ luks_device.name }} root=/dev/mapper/{{ vg_name }}-root resume=/dev/mapper/{{ vg_name }}-swap rd.luks.options=discard"
+          GRUB_PRELOAD_MODULES="part_gpt part_msdos"
+          GRUB_ENABLE_CRYPTODISK=y
+
+    - name: Install GRUB EFI
+      command: arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
+
+    - name: Generate GRUB config
+      command: arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+
+    - name: Install basic packages
+      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed openssh python vim iwd'
+
+    - name: Configure iwd for auto network configuration
+      copy:
+        dest: /mnt/etc/iwd/main.conf
+        content: |
+          [General]
+          EnableNetworkConfiguration=true
+
+    - name: Configure SSH to allow root login
       lineinfile:
-        path: /mnt/etc/default/grub
-        line: 'GRUB_CMDLINE_LINUX="cryptdevice={{ luks_device.device }}:lvm root=/dev/mapper/Vol-root elevator=noop"'
-        regexp: '^GRUB_CMDLINE_LINUX='
+        path: /mnt/etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin yes"
 
-    - name: Configure GRUB_CMDLINE_LINUX_DEFAULT
-      lineinfile:
-        path: /mnt/etc/default/grub
-        line: 'GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet resume=/dev/mapper/Vol-swap"'
-        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    - name: Remind to set root password manually
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  IMPORTANTE: No se ha establecido la contraseña de root.
 
-    - name: Grub mkconfig
-      command: arch-chroot /mnt bash -c 'grub-mkconfig -o /boot/grub/grub.cfg'
+          Después de completar esta instalación, ejecuta manualmente:
 
-    - name: Install dhclient
-      command: arch-chroot /mnt bash -c 'pacman -S --noconfirm --needed dhclient openssh bash-completion python vim iwd'
+            arch-chroot /mnt passwd root
+
+          O si ya has salido del chroot:
+
+            passwd

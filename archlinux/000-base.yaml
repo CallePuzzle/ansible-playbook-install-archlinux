@@ -12,6 +12,7 @@
         group: users
         groups: power,storage,wheel
         append: yes
+        password: "{{ user_password_hash | trim }}"
 
     - name: Add user to sudoers
       community.general.sudoers:
@@ -25,24 +26,30 @@
       pacman:
         name: pacman-contrib
 
+    - name: Check if mirrorlist backup exists
+      stat:
+        path: /etc/pacman.d/mirrorlist.backup
+      register: mirrorlist_backup
+
     - name: Create mirrorlist backup
       copy:
         src: /etc/pacman.d/mirrorlist
         dest: /etc/pacman.d/mirrorlist.backup
         remote_src: yes
-      when: false # TODO idempotence
+      when: not mirrorlist_backup.stat.exists
 
     - name: Rank mirrorlist
-      command: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
-      when: false # TODO idempotence
+      shell: "rankmirrors -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist"
+      when: not mirrorlist_backup.stat.exists
+      changed_when: true
 
-    - name: Install X
+    - name: Install X and base packages
       pacman:
         name:
-          - xf86-video-intel
-          - xorg-xwayland
+          - mesa
           - plasma
-          - plasma-wayland-session
+          - linux-headers
+          - dkms
 
     - name: Enable X
       service:
@@ -55,31 +62,9 @@
     - name: Install necessary packages
       pacman:
         name:
-          - dolphin
-          - spectacle
-          - okular
-          - gwenview
-          - unzip
-          - ark
-          - bluedevil
-          - bluez
-          - bluez-libs
-          - bluez-utils
-          - pulseaudio-bluetooth
           - htop
-          - cups
-          - libcups
-          - print-manager
           - bind-tools
-          - nfs-utils
           - usbutils
-          - python-virtualenv
-
-    - name: Start and enable bluetooth
-      service:
-        name: bluetooth
-        enabled: yes
-        state: started
 
     - name: Set timezone to Europa/España
       community.general.timezone:

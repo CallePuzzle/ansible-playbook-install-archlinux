@@ -1,0 +1,67 @@
+---
+# Playbook para crear el contenedor de testing
+# Este playbook se ejecuta en el host para crear el contenedor
+
+- name: Create molecule test container
+  hosts: localhost
+  gather_facts: false
+  vars:
+    molecule_inventory:
+      all:
+        hosts:
+          archlinux-test:
+            ansible_user: ansible
+            ansible_ssh_user: ansible
+            ansible_become: true
+            ansible_become_method: sudo
+            ansible_python_interpreter: /usr/bin/python3
+            ansible_connection: podman
+            ansible_host: archlinux-test
+            ansible_port: 22
+  tasks:
+    - name: Create molecule instance(s)
+      containers.podman.podman_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        state: started
+        privileged: "{{ item.privileged | default(false) }}"
+        volumes: "{{ item.volumes | default([]) }}"
+        env: "{{ item.env | default({}) }}"
+        command: "{{ item.command | default(omit) }}"
+        network: "{{ item.network | default(omit) }}"
+        exposed_ports: "{{ item.exposed_ports | default([]) }}"
+        capabilities: "{{ item.capabilities | default([]) }}"
+      register: result
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Wait for container to be ready
+      ansible.builtin.command: |
+        podman exec archlinux-test systemctl is-system-running
+      register: system_status
+      until: system_status.rc == 0 or 'degraded' in system_status.stdout
+      retries: 30
+      delay: 2
+      ignore_errors: true
+
+    - name: Ensure container is accessible via SSH
+      ansible.builtin.command: |
+        podman exec archlinux-test systemctl start sshd
+      ignore_errors: true
+
+    - name: Create molecule instance config
+      ansible.builtin.copy:
+        content: "{{ molecule_inventory | to_yaml }}"
+        dest: "{{ molecule_ephemeral_directory }}/inventory/molecule_inventory.yml"
+        mode: '0644'
+      vars:
+        molecule_ephemeral_directory: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') | default('./.molecule', true) }}"
+
+    - name: Add container to inventory
+      ansible.builtin.add_host:
+        name: "{{ item.name }}"
+        groups: ["molecule"]
+        ansible_user: "{{ item.ansible_user | default('ansible') }}"
+        ansible_connection: "{{ item.ansible_connection | default('podman') }}"
+      loop: "{{ molecule_yml.platforms }}"

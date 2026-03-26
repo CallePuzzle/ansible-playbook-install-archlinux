@@ -1,0 +1,100 @@
+---
+- name: Developer tools configuration
+  hosts: all
+  tasks:
+    - name: Create zed config directory
+      file:
+        path: "/home/{{ ansible_ssh_user }}/.config/zed"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+
+    - name: Configure zed keymap
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/zed/keymap.json"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          [
+            {
+              "context": "Workspace",
+              "bindings": {
+                "ctrl-shift-t": "terminal_panel::ToggleFocus",
+                "ctrl-shift-y": "workspace::CloseAllDocks"
+              }
+            },
+            {
+              "context": "Editor",
+              "bindings": {
+                "ctrl-c": "editor::ToggleComments",
+                "ctrl-y": "editor::Paste",
+                "ctrl-7": "editor::Undo",
+                "alt-s": ["editor::SelectNext", { "replace_newest": false }],
+                "ctrl-up": "editor::MoveToStartOfParagraph",
+                "ctrl-down": "editor::MoveToEndOfParagraph",
+                "ctrl-right": "editor::MoveToNextSubwordEnd",
+                "ctrl-left": "editor::MoveToPreviousSubwordStart"
+              }
+            },
+            {
+              "context": "Editor && selection_mode",
+              "bindings": {
+                "ctrl-up": [
+                  "editor::SelectToStartOfParagraph",
+                  { "stop_at_soft_wraps": false }
+                ],
+                "ctrl-down": [
+                  "editor::SelectToEndOfParagraph",
+                  { "stop_at_soft_wraps": false }
+                ],
+                "ctrl-right": "editor::SelectToNextWordEnd",
+                "ctrl-left": "editor::SelectToPreviousSubwordStart"
+              }
+            },
+            {
+              "context": "Editor && edit_prediction",
+              "bindings": {
+                "alt-p": "editor::AcceptEditPrediction",
+                "tab": "editor::AcceptEditPrediction"
+              }
+            },
+            {
+              "context": "Editor && edit_prediction_conflict",
+              "bindings": {
+                "alt-p": "editor::AcceptEditPrediction"
+              }
+            }
+          ]
+
+    - name: Configure zed settings
+      copy:
+        dest: "/home/{{ ansible_ssh_user }}/.config/zed/settings.json"
+        owner: "{{ ansible_ssh_user }}"
+        content: |
+          {
+            "edit_predictions": {
+              "provider": "zed",
+              "mode": "subtle",
+              "copilot": {
+                "proxy": null,
+                "proxy_no_verify": null
+              },
+              "enabled_in_text_threads": false
+            },
+            "agent": {
+              "tool_permissions": {
+                "default": "allow"
+              },
+              "default_profile": "write",
+              "default_model": {
+                "provider": "copilot_chat",
+                "model": "claude-haiku-4.5"
+              }
+            },
+            "base_keymap": "Emacs",
+            "ui_font_size": 16,
+            "buffer_font_size": 16,
+            "theme": {
+              "mode": "dark",
+              "light": "One Light",
+              "dark": "One Dark"
+            }
+          }

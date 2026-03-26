@@ -1,0 +1,70 @@
+---
+# Playbook de preparación del sistema
+# Se ejecuta antes de converge para preparar el entorno de testing
+
+- name: Prepare Arch Linux system for testing
+  hosts: all
+  gather_facts: true
+  become: true
+  become_method: sudo
+  vars:
+    # Default password hash for 'ansible' user (generated with: openssl passwd -6 ansible)
+    user_password_hash: "{{ molecule_user_password_hash | default('$6$rounds=5000$saltsalt$X.SPD5L.H3SCKjGOzkgvJ8Nu2XwK4lFqokL0rR9sauvdXeiRpAn7C7c7q8W/KQ0') }}"
+  tasks:
+    - name: Ensure system is updated
+      pacman:
+        update_cache: yes
+        upgrade: yes
+      changed_when: false
+
+    - name: Install required packages for testing
+      pacman:
+        name:
+          - sudo
+          - python
+          - python-pip
+          - openssh
+          - git
+        state: present
+
+    - name: Ensure SSH service is running
+      systemd:
+        name: sshd
+        state: started
+        enabled: yes
+
+    - name: Create test user
+      user:
+        name: "{{ user_name | default('ansible') }}"
+        uid: 1000
+        group: users
+        groups: wheel
+        append: yes
+        shell: /bin/bash
+        password: "{{ user_password_hash | default('$6$rounds=5000$saltsalt$X.SPD5L.H3SCKjGOzkgvJ8Nu2XwK4lFqokL0rR9sauvdXeiRpAn7C7c7q8W/KQ0') }}"
+
+    - name: Configure sudo for wheel group
+      community.general.sudoers:
+        name: allow-wheel-group
+        group: wheel
+        state: present
+        nopassword: true
+        commands: ALL
+
+    - name: Ensure ansible user exists (for molecule compatibility)
+      user:
+        name: ansible
+        uid: 1001
+        group: users
+        groups: wheel
+        append: yes
+        shell: /bin/bash
+        password: "{{ user_password_hash | default('$6$rounds=5000$saltsalt$X.SPD5L.H3SCKjGOzkgvJ8Nu2XwK4lFqokL0rR9sauvdXeiRpAn7C7c7q8W/KQ0') }}"
+      when: user_name | default('ansible') != 'ansible'
+
+    - name: Set authorized key for ansible user
+      authorized_key:
+        user: ansible
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub', errors='ignore') | default('') }}"
+        state: present
+      ignore_errors: true
