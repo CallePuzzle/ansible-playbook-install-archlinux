@@ -79,11 +79,7 @@
           [Desktop Entry]
           Type=Application
           Name=Solaar
-<<<<<<< Updated upstream
-          Exec=solaar -w hide-only
-=======
-          Exec=/bin/sh -c 'sleep 5 && solaar -w hide'
->>>>>>> Stashed changes
+          Exec=solaar -w hide
           Icon=solaar
           Comment=Logitech device manager
           X-GNOME-Autostart-enabled=true
@@ -391,8 +387,6 @@
                   echo -e "$vi_mode_color $vi_mode_symbol \x1b[0m "
               end
           end
-<<<<<<< Updated upstream
-=======
 
   handlers:
     - name: restart bluetooth
@@ -406,4 +400,3 @@
       command: udevadm control --reload-rules
       become: yes
       become_method: sudo
->>>>>>> Stashed changes
