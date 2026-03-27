@@ -41,6 +41,22 @@
       become: yes
       become_method: sudo
 
+    - name: Create plugdev group
+      group:
+        name: plugdev
+        state: present
+      become: yes
+      become_method: sudo
+
+    - name: Add user to plugdev group
+      user:
+        name: "{{ ansible_ssh_user }}"
+        groups: plugdev
+        append: yes
+      become: yes
+      become_method: sudo
+      notify: reload udev rules
+
     - name: Enable bluetooth service
       ansible.builtin.systemd:
         name: bluetooth
@@ -63,7 +79,7 @@
           [Desktop Entry]
           Type=Application
           Name=Solaar
-          Exec=solaar -w hide-only
+          Exec=solaar -w hide
           Icon=solaar
           Comment=Logitech device manager
           X-GNOME-Autostart-enabled=true
@@ -184,11 +200,11 @@
           }
         - {
             option: "Window Maximize",
-            value: "Meta+PgUp\tMeta+Up,Meta+PgUp,Maximize Window",
+            value: "Meta+PgUp	Meta+Up,Meta+PgUp,Maximize Window",
           }
         - {
             option: "Window Minimize",
-            value: "Meta+PgDown\tMeta+Down,Meta+PgDown,Minimize Window",
+            value: "Meta+PgDown	Meta+Down,Meta+PgDown,Minimize Window",
           }
         - {
             option: "Window Quick Tile Bottom Left",
@@ -371,3 +387,16 @@
                   echo -e "$vi_mode_color $vi_mode_symbol \x1b[0m "
               end
           end
+
+  handlers:
+    - name: restart bluetooth
+      service:
+        name: bluetooth
+        state: restarted
+      become: yes
+      become_method: sudo
+
+    - name: reload udev rules
+      command: udevadm control --reload-rules
+      become: yes
+      become_method: sudo
