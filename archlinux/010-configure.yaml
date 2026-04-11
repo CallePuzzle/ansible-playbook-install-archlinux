@@ -123,7 +123,7 @@
     - name: Fix permissions on .desktop files in autostart
       ansible.builtin.file:
         path: "/home/{{ ansible_ssh_user }}/.config/autostart/{{ item }}"
-        mode: '0644'
+        mode: "0644"
       loop:
         - solaar.desktop
         - nextcloud.desktop
@@ -426,11 +426,8 @@
         state: restarted
       become: yes
       become_method: sudo
-<<<<<<< HEAD
-=======
 
     - name: reload udev rules
       command: udevadm control --reload-rules
       become: yes
       become_method: sudo
->>>>>>> origin/main
