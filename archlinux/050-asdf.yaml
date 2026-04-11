@@ -1,0 +1,45 @@
+---
+- name: Install asdf-vm from AUR and language plugins
+  hosts: all
+  vars:
+    asdf_plugins:
+      - { name: nodejs, url: https://github.com/asdf-vm/asdf-nodejs.git }
+      - { name: golang, url: https://github.com/asdf-community/asdf-golang.git }
+      - {
+          name: terraform,
+          url: https://github.com/asdf-community/asdf-hashicorp.git,
+        }
+  tasks:
+    - name: Install plugin dependencies
+      pacman:
+        name:
+          - base-devel
+          - openssl
+          - curl
+          - git
+      become: yes
+      become_method: sudo
+
+    - name: Install asdf-vm from AUR
+      kewlfft.aur.aur:
+        name: asdf-vm
+        state: present
+        use: yay
+        update_cache: yes
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      when: false
+
+    - name: Install asdf plugins
+      shell: |
+        asdf plugin add {{ item.name }} {{ item.url }}
+      args:
+        executable: /usr/bin/fish
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      loop: "{{ asdf_plugins }}"
+      register: plugin_install
+      changed_when: "'already added' not in plugin_install.stderr | default('')"
+      failed_when:
+        - plugin_install.rc != 0
+        - "'already added' not in plugin_install.stderr | default('')"
