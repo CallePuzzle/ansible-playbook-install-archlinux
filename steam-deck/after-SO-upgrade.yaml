@@ -1,6 +1,6 @@
 ---
 - name: Reinstall Steam Deck Desktop packages after SteamOS upgrade
-  hosts: localhost
+  hosts: all
   tasks:
 
     - name: Disable readonly steamos
@@ -18,13 +18,55 @@
       become: yes
       become_method: sudo
 
-    - name: Create link /opt/firefox/firefox /usr/bin/firefox
-      file:
-        src: /opt/firefox/firefox
-        dest: /usr/bin/firefox
-        state: link
+    - name: Remove obsolete packages
+      pacman:
+        name:
+          - leafpad
+          - terminator
+          - emacs
+          - transmission-qt
+          - obsidian
+          - telegram-desktop
+        state: absent
       become: yes
       become_method: sudo
+
+    - name: Remove orphan dependencies
+      shell: |
+        set -e
+        orphans=$(pacman -Qdtq || true)
+        if [ -n "$orphans" ]; then
+          pacman -Rns --noconfirm $orphans
+        fi
+      args:
+        executable: /usr/bin/bash
+      become: yes
+      become_method: sudo
+      register: orphan_removal
+      changed_when: "'no targets specified' not in orphan_removal.stdout | default('') and orphans | default('') != ''"
+
+    - name: Find latest cached librewolf-bin package
+      shell: "ls -t /home/{{ ansible_ssh_user }}/.cache/yay/librewolf-bin/librewolf-bin-*.pkg.tar.zst 2>/dev/null | head -1"
+      args:
+        executable: /usr/bin/bash
+      register: librewolf_pkg_path
+      changed_when: false
+      failed_when: false
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+
+    - name: Install librewolf-bin from cache
+      shell: "pacman -U --noconfirm --overwrite=\"*\" {{ librewolf_pkg_path.stdout }}"
+      args:
+        executable: /usr/bin/bash
+      become: yes
+      become_method: sudo
+      when: librewolf_pkg_path.stdout != ""
+
+    - name: Notify if librewolf-bin package is not cached
+      debug:
+        msg: "No cached librewolf-bin package found in ~/.cache/yay/librewolf-bin; rebuild it with yay if needed."
+      when: librewolf_pkg_path.stdout == ""
 
     - name: Reinstall packages with --overwrite="*"
       pacman:
@@ -39,9 +81,7 @@
           - rsync
           - btop
           - audacity
-          - obsidian
           - noto-fonts-emoji # tasks' icons
-          - telegram-desktop
           - kcalc
           - sshpass
           - dolphin
@@ -50,10 +90,6 @@
           - gwenview
           - unzip
           - ark
-          - bluedevil
-          - bluez
-          - bluez-libs
-          - bluez-utils
           - cups
           - libcups
           - print-manager

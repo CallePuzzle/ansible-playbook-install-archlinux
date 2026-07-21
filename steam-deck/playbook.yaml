@@ -24,6 +24,35 @@
         dev: /dev/mmcblk0p1
       become: yes
       become_method: sudo
+      tags:
+        - microsd
+
+    - name: Remove obsolete packages
+      pacman:
+        name:
+          - leafpad
+          - terminator
+          - emacs
+          - transmission-qt
+          - obsidian
+          - telegram-desktop
+        state: absent
+      become: yes
+      become_method: sudo
+
+    - name: Remove orphan dependencies
+      shell: |
+        set -e
+        orphans=$(pacman -Qdtq || true)
+        if [ -n "$orphans" ]; then
+          pacman -Rns --noconfirm $orphans
+        fi
+      args:
+        executable: /usr/bin/bash
+      become: yes
+      become_method: sudo
+      register: orphan_removal
+      changed_when: "'no targets specified' not in orphan_removal.stdout | default('') and orphans | default('') != ''"
 
     - name: Install necessary packages
       pacman:
@@ -38,9 +67,7 @@
           - rsync
           - btop
           - audacity
-          - obsidian
           - noto-fonts-emoji # tasks' icons
-          - telegram-desktop
           - kcalc
           - sshpass
           - dolphin
@@ -49,10 +76,6 @@
           - gwenview
           - unzip
           - ark
-          - bluedevil
-          - bluez
-          - bluez-libs
-          - bluez-utils
           - cups
           - libcups
           - print-manager
@@ -61,8 +84,41 @@
           - fish
           - ghostty
           - solaar
+        extra_args: --overwrite="*"
       become: yes
       become_method: sudo
+
+    - name: Ensure flatpak is installed
+      pacman:
+        name: flatpak
+        state: present
+      become: yes
+      become_method: sudo
+
+    - name: Add flathub remote for user
+      community.general.flatpak_remote:
+        name: flathub
+        state: present
+        flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+        method: user
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+
+    - name: Install Obsidian via flatpak
+      community.general.flatpak:
+        name: md.obsidian.Obsidian
+        state: present
+        method: user
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+
+    - name: Install Telegram Desktop via flatpak
+      community.general.flatpak:
+        name: org.telegram.desktop
+        state: present
+        method: user
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
 
     - name: Create plugdev group
       group:
@@ -78,33 +134,6 @@
         append: yes
       become: yes
       become_method: sudo
-      notify: reload udev rules
-
-    - name: Enable bluetooth service
-      ansible.builtin.systemd:
-        name: bluetooth
-        enabled: yes
-        state: started
-      become: yes
-      become_method: sudo
-
-    - name: Configure bluetooth main.conf
-      ansible.builtin.copy:
-        dest: /etc/bluetooth/main.conf
-        content: |
-          [General]
-          Name = {{ inventory_hostname }}
-          Class = 0x000100
-          DiscoverableTimeout = 0
-          AlwaysPairable = false
-          PairableTimeout = 0
-          AutoEnable=true
-          Privacy = device
-          JustWorksRepairing = always
-          Experimental = true
-      become: yes
-      become_method: sudo
-      notify: restart bluetooth
 
     - name: Create autostart directory
       file:
@@ -441,16 +470,3 @@
                   echo -e "$vi_mode_color $vi_mode_symbol \x1b[0m "
               end
           end
-
-  handlers:
-    - name: restart bluetooth
-      service:
-        name: bluetooth
-        state: restarted
-      become: yes
-      become_method: sudo
-
-    - name: reload udev rules
-      command: udevadm control --reload-rules
-      become: yes
-      become_method: sudo
