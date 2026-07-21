@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository contains Ansible playbooks for automating the installation and configuration of Arch Linux on various devices. It supports two main use cases:
+This repository contains Ansible playbooks for automating the installation and configuration of Arch Linux on various devices. It supports three main use cases:
 
 1. **Fresh Arch Linux Installation** (`laptop/`): For installing Arch Linux from scratch on bare metal with LUKS encryption, LVM, and EFI boot
 2. **Post-Installation Configuration** (`archlinux/`): For configuring user environment, desktop settings, and applications after base installation
@@ -24,7 +24,8 @@ This repository contains Ansible playbooks for automating the installation and c
 - **Boot**: EFI with systemd-boot style configuration via efibootmgr
 - **Desktop Environment**: KDE Plasma with SDDM display manager
 - **Shell**: Fish with fisher plugin manager
-- **Editor**: Zed (primary), Emacs
+- **Terminal**: Ghostty
+- **Editor**: Zed (primary)
 
 ## Project Structure
 
@@ -37,7 +38,11 @@ This repository contains Ansible playbooks for automating the installation and c
 ├── archlinux/                 # Post-installation configuration playbooks
 │   ├── 000-base.yaml          # Base system: user creation, Xorg/Plasma, mirror ranking
 │   ├── 010-configure.yaml     # User environment: packages, KDE settings, fish, SSH
-│   └── 020-developer.yaml     # Developer tools: Zed editor configuration
+│   ├── 011-podman.yaml        # Podman installation and configuration
+│   ├── 020-developer.yaml     # Developer tools: Zed editor configuration
+│   ├── 030-aur.yaml           # AUR helper installation
+│   ├── 040-tuxedo.yaml        # Tuxedo-specific hardware/drivers
+│   └── 050-asdf.yaml          # asdf-vm and language plugins
 │
 ├── laptop/                    # Fresh installation playbooks (run from Arch ISO)
 │   ├── 000-platform-base.yaml # Disk partitioning, LUKS, LVM, base packages
@@ -427,7 +432,8 @@ All hosts use `StrictHostKeyChecking=no` for easier automation.
    - Run `archlinux/000-base.yaml` → Run `archlinux/010-configure.yaml` → Run `archlinux/020-developer.yaml`
 
 2. **Steam Deck setup**:
-   - Switch to desktop mode → Run `steam-deck/playbook.yaml` → Run `archlinux/` playbooks
+   - Switch to desktop mode → Run `steam-deck/playbook.yaml`
+   - Optionally run `archlinux/020-developer.yaml` for Zed configuration
 
 3. **After SteamOS update**:
    - Run `steam-deck/after-SO-upgrade.yaml` to restore packages

@@ -80,10 +80,27 @@
           [Resolve]
           DNS=1.1.1.1 1.0.0.1
           FallbackDNS=8.8.8.8 8.8.4.4
-          DNSOverTLS=yes
-          DNSSEC=yes
+          DNSOverTLS=no
+          DNSSEC=no
           MulticastDNS=yes
       notify: restart systemd-resolved
+
+    - name: Configure NetworkManager to use systemd-resolved
+      ansible.builtin.copy:
+        dest: /etc/NetworkManager/NetworkManager.conf
+        content: |
+          # Configuration file for NetworkManager.
+          # See "man 5 NetworkManager.conf" for details.
+
+          [main]
+          dns=systemd-resolved
+
+    - name: Ensure resolv.conf is symlinked to systemd-resolved stub
+      ansible.builtin.file:
+        src: /run/systemd/resolve/stub-resolv.conf
+        dest: /etc/resolv.conf
+        state: link
+        force: yes
 
     - name: Install necessary packages
       pacman:

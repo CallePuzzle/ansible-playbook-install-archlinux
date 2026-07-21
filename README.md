@@ -155,19 +155,20 @@ $ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file a
 Now, we can remove the access given in the previous step. And run the rest of the playbooks.
 
 ```bash
-$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/100-configure-arch-linux.yaml -kK
+$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/010-configure.yaml -kK
+$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/020-developer.yaml -kK
 ```
 
 ## Steam Deck
 
-SteamOS comes pre-installed and pre-configured by default. To use the Steam Deck as a desktop, we need activate it.
+SteamOS comes pre-installed and pre-configured by default. To use the Steam Deck as a desktop, we need activate it and apply the desktop configuration.
 
 ```bash
 $ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file steam-deck/playbook.yaml -kK
 ```
 
-And configure our personal settings.
+After SteamOS upgrades, restore the packages installed on top of the read-only system.
 
 ```bash
-$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file archlinux/100-configure-arch-linux.yaml -kK
+$ ansible-playbook -i inventory.ini --vault-password-file .vault-password-file steam-deck/after-SO-upgrade.yaml -kK
 ```
