@@ -7,24 +7,37 @@
       command: steamos-readonly disable
       become: yes
       become_method: sudo
+      tags: [base]
 
     - name: Pacman key init
       command: pacman-key --init
       become: yes
       become_method: sudo
+      tags: [base]
 
     - name: Pacman key populate
       command: pacman-key --populate
       become: yes
       become_method: sudo
+      tags: [base]
 
-    - name: Create link /opt/firefox/firefox /usr/bin/firefox
+    - name: Create Firefox link
       file:
         src: /opt/firefox/firefox
         dest: /usr/bin/firefox
         state: link
       become: yes
       become_method: sudo
+      tags: [links]
+
+    - name: Create Obsidian link
+      file:
+        src: /opt/obsidian/Obsidian.AppImage
+        dest: /usr/bin/obsidian
+        state: link
+      become: yes
+      become_method: sudo
+      tags: [links]
 
     - name: Reinstall packages with --overwrite="*"
       pacman:
@@ -34,6 +47,7 @@
       become: yes
       become_method: sudo
       with_items:
+        - base-devel
         - leafpad
         - terminator
         - vlc
@@ -45,10 +59,10 @@
         - emacs
         - btop
         - audacity
-        - obsidian
         - noto-fonts-emoji # tasks' icons
         - telegram-desktop
         - kcalc
         - sshpass
         - transmission-qt
         - solaar
+      tags: [packages]
