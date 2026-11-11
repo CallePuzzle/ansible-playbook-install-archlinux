@@ -51,7 +51,9 @@ This repository contains Ansible playbooks for automating the installation and c
 │
 ├── steam-deck/                # Steam Deck specific playbooks
 │   ├── playbook.yaml          # Initial desktop mode setup
-│   └── after-SO-upgrade.yaml  # Reinstall packages after SteamOS updates
+│   ├── after-SO-upgrade.yaml  # Reinstall packages after SteamOS updates
+│   └── tasks/
+│       └── packages.yaml      # Shared package management tasks (both playbooks)
 │
 ├── host_vars/                 # Host-specific variables (encrypted with vault)
 │   ├── msi.yaml              # MSI laptop: disk config, LUKS passwords, user hashes

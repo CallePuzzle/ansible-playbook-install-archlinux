@@ -27,66 +27,8 @@
       tags:
         - microsd
 
-    - name: Remove obsolete packages
-      pacman:
-        name:
-          - leafpad
-          - terminator
-          - emacs
-          - transmission-qt
-          - obsidian
-          - telegram-desktop
-        state: absent
-      become: yes
-      become_method: sudo
-
-    - name: Remove orphan dependencies
-      shell: |
-        set -e
-        orphans=$(pacman -Qdtq || true)
-        if [ -n "$orphans" ]; then
-          pacman -Rns --noconfirm $orphans
-        fi
-      args:
-        executable: /usr/bin/bash
-      become: yes
-      become_method: sudo
-      register: orphan_removal
-      changed_when: "'no targets specified' not in orphan_removal.stdout | default('') and orphans | default('') != ''"
-
-    - name: Install necessary packages
-      pacman:
-        name:
-          - featherpad
-          - vlc
-          - the_silver_searcher
-          - nextcloud-client
-          - wget
-          - git
-          - less
-          - rsync
-          - btop
-          - audacity
-          - noto-fonts-emoji # tasks' icons
-          - kcalc
-          - sshpass
-          - dolphin
-          - spectacle
-          - okular
-          - gwenview
-          - unzip
-          - ark
-          - cups
-          - libcups
-          - print-manager
-          - nfs-utils
-          - python-virtualenv
-          - fish
-          - ghostty
-          - solaar
-        extra_args: --overwrite="*"
-      become: yes
-      become_method: sudo
+    - name: Manage Steam Deck packages
+      ansible.builtin.import_tasks: tasks/packages.yaml
 
     - name: Ensure flatpak is installed
       pacman:
@@ -180,7 +122,6 @@
         - solaar.desktop
         - nextcloud.desktop
         - Nextcloud.desktop
-        - tuxedo-control-center-tray.desktop
       ignore_errors: yes
 
     - name: Configure git
@@ -408,6 +349,8 @@
         executable: /usr/bin/fish
       become: yes
       become_user: "{{ ansible_ssh_user }}"
+      register: fisher_update
+      changed_when: fisher_update.stdout | trim | length > 0
 
     - name: Configure config.fish
       copy:
