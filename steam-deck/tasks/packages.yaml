@@ -1,0 +1,63 @@
+---
+- name: Remove obsolete packages
+  ansible.builtin.pacman:
+    name:
+      - leafpad
+      - terminator
+      - emacs
+      - transmission-qt
+      - obsidian
+      - telegram-desktop
+    state: absent
+  become: yes
+  become_method: sudo
+
+- name: Remove orphan dependencies
+  ansible.builtin.shell: |
+    set -e
+    orphans=$(pacman -Qdtq || true)
+    if [ -n "$orphans" ]; then
+      pacman -Rns --noconfirm $orphans
+    fi
+  args:
+    executable: /usr/bin/bash
+  become: yes
+  become_method: sudo
+  register: orphan_removal
+  changed_when: orphan_removal.stdout | trim | length > 0
+
+- name: Install necessary packages
+  ansible.builtin.pacman:
+    name:
+      - base-devel
+      - featherpad
+      - vlc
+      - the_silver_searcher
+      - nextcloud-client
+      - wget
+      - git
+      - less
+      - rsync
+      - btop
+      - audacity
+      - noto-fonts-emoji
+      - kcalc
+      - sshpass
+      - dolphin
+      - spectacle
+      - okular
+      - gwenview
+      - unzip
+      - ark
+      - cups
+      - libcups
+      - print-manager
+      - nfs-utils
+      - python-virtualenv
+      - fish
+      - ghostty
+      - solaar
+    state: "{{ steam_deck_package_state | default('present') }}"
+    extra_args: --overwrite="*"
+  become: yes
+  become_method: sudo

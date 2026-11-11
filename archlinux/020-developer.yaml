@@ -89,6 +89,14 @@
                 "model": "claude-haiku-4.5"
               }
             },
+            "agent_servers": {
+              "Kimi Code CLI": {
+                "type": "custom",
+                "command": "kimi",
+                "args": ["acp"],
+                "env": {},
+              },
+            },
             "base_keymap": "Emacs",
             "ui_font_size": 16,
             "buffer_font_size": 16,

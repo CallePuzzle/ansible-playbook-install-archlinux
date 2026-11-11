@@ -75,7 +75,6 @@
           DiscoverableTimeout = 0
           AlwaysPairable = false
           PairableTimeout = 0
-          AutoEnable=true
           Privacy = device
           JustWorksRepairing = always
           Experimental = true
@@ -103,6 +102,27 @@
           X-GNOME-Autostart-enabled=true
           X-KDE-autostart-after=panel
           X-KDE-autostart-phase=2
+
+    - name: Check if MX Mechanical Mini is connected
+      shell: solaar show 2>/dev/null | grep -q "MX Mechanical Mini"
+      register: mx_mini_connected
+      failed_when: false
+      changed_when: false
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+
+    - name: Configure MX Mechanical Mini divert-keys
+      shell: "solaar config 'MX Mechanical Mini' divert-keys '{{ item }}' Normal"
+      loop:
+        - Volume Down
+        - Volume Up
+        - Page Up
+        - Page Down
+        - Mute Sound
+      when: mx_mini_connected.rc == 0
+      become: yes
+      become_user: "{{ ansible_ssh_user }}"
+      changed_when: true
 
     - name: Configure nextcloud-client autostart
       copy:
